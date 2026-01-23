@@ -551,6 +551,7 @@ function animate() {
   rafId = requestAnimationFrame(animate);
   // 持久化当前路程，保证再次发送时从当前位置继续
   appState.ui.routeTravel = travel;
+  travelAccum = travel;
 }
 
 onMounted(() => {

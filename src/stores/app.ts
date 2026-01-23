@@ -138,7 +138,7 @@ export class AppStore {
         appState.ui.routeTravel = 0;
         appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
         appState.ui.subTitleText = `为您规划到 ${dept}科室 的路线`;
-        const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。按照图中指示，穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利。`;
+        const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。按照图中指示，穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利！`;
         const dur = Math.max(
           6,
           Math.min(20, Math.round(speakText.length / 10)),
