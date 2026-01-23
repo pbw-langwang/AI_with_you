@@ -75,6 +75,8 @@ export interface AppState {
   ui: {
     text: string;
     subTitleText: string;
+    routeTravel?: number;
+    routeResetToken?: number;
     routeGuide?: {
       visible: boolean;
       title: string;

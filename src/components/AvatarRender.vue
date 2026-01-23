@@ -1,5 +1,13 @@
 <template>
   <div ref="containerRef" class="avatar-render">
+    <!-- 全屏路线覆盖层 -->
+    <RouteFloor3D
+      v-if="appState.ui.routeGuide?.visible"
+      :durationSec="appState.ui.routeGuide!.durationSec"
+      :key="appState.ui.routeResetToken"
+      class="route-floor-overlay"
+    />
+
     <!-- SDK 渲染容器 -->
     <div :id="containerId" class="sdk-container" />
 
@@ -19,45 +27,14 @@
     </div>
 
     <!-- 路线引导 -->
-    <div v-show="appState.ui.routeGuide?.visible" class="route-guide">
-      <div class="route-title">{{ appState.ui.routeGuide?.title }}</div>
-      <div class="map-3d">
-        <div
-          class="scene"
-          :style="{
-            '--routeDur': `${appState.ui.routeGuide?.durationSec || 8}s`,
-          }"
-        >
-          <div class="floor floor1">
-            <div class="label">1F</div>
-            <div class="path path-1f-a"></div>
-            <div class="path path-1f-b"></div>
-            <div class="marker start">起点</div>
-          </div>
-          <div class="floor floor2">
-            <div class="label">2F</div>
-            <div class="path path-2f-a"></div>
-            <div class="path path-2f-b"></div>
-            <div class="marker end">终点</div>
-          </div>
-          <div class="elevator-shaft"></div>
-          <div class="elevator-car"></div>
-          <div
-            v-show="appState.ui.routeGuide?.mode === 'floors'"
-            class="guide-arrow"
-          ></div>
-        </div>
-      </div>
-      <div class="route-steps">
-        <div
-          v-for="(s, i) in appState.ui.routeGuide?.steps"
-          :key="i"
-          class="route-step"
-        >
-          {{ i + 1 }}. {{ s }}
-        </div>
-      </div>
-    </div>
+    <RouteGuide
+      v-if="appState.ui.routeGuide?.visible"
+      :guide="{
+        title: appState.ui.routeGuide!.title,
+        steps: appState.ui.routeGuide!.steps,
+        durationSec: appState.ui.routeGuide!.durationSec,
+      }"
+    />
   </div>
 </template>
 
@@ -66,6 +43,8 @@ import { inject, computed } from "vue";
 import { avatarService } from "../services/avatar";
 import type { AppState } from "../types";
 import siriIcon from "../assets/siri.png";
+import RouteGuide from "./RouteGuide.vue";
+import RouteFloor3D from "./RouteFloor3D.vue";
 
 // 注入全局状态
 const appState = inject<AppState>("appState")!;
@@ -81,9 +60,19 @@ const containerId = computed(() => avatarService.getContainerId());
   border-right: 1px solid #e0e0e0;
   background: #f5f5f5;
 }
+.route-floor-overlay {
+  z-index: 1;
+}
 .sdk-container {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  z-index: 1000;
+  left: 16px;
+  bottom: 16px;
+  width: 320px;
+  height: 480px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 .subtitle {
   position: absolute;
@@ -129,190 +118,5 @@ const containerId = computed(() => avatarService.getContainerId());
   font-size: 18px;
   color: #666;
   font-weight: 500;
-}
-.route-guide {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 420px;
-  z-index: 120;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(6px);
-}
-.route-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 8px;
-}
-.map-3d {
-  perspective: 1000px;
-  height: 220px;
-  margin-bottom: 10px;
-}
-.scene {
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transform: rotateX(55deg) rotateZ(-10deg);
-  position: relative;
-}
-.floor {
-  position: absolute;
-  left: 20px;
-  top: 30px;
-  width: 360px;
-  height: 140px;
-  border-radius: 10px;
-  background: linear-gradient(
-    135deg,
-    rgba(232, 241, 255, 0.35) 0%,
-    rgba(255, 255, 255, 0.35) 100%
-  );
-  border: 1px solid #cdd6e6;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-.floor1 {
-  transform: translateZ(0);
-}
-.floor2 {
-  transform: translateZ(60px);
-}
-.label {
-  position: absolute;
-  right: 10px;
-  top: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #1f2d3d;
-}
-.path {
-  position: absolute;
-  background: linear-gradient(90deg, #0a84ff 0%, #5ac8fa 100%);
-  box-shadow: 0 0 12px rgba(10, 132, 255, 0.6);
-}
-.path-1f-a {
-  left: 30px;
-  top: 90px;
-  width: 220px;
-  height: 8px;
-}
-.path-1f-b {
-  left: 250px;
-  top: 40px;
-  width: 8px;
-  height: 60px;
-}
-.path-2f-a {
-  left: 250px;
-  top: 30px;
-  width: 8px;
-  height: 60px;
-}
-.path-2f-b {
-  left: 110px;
-  top: 60px;
-  width: 160px;
-  height: 8px;
-}
-.marker {
-  position: absolute;
-  padding: 4px 8px;
-  background: rgba(255, 0, 0, 0.85);
-  color: #fff;
-  font-size: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(180, 0, 0, 0.9);
-}
-.marker.start {
-  left: 22px;
-  top: 80px;
-  transform: translateZ(0);
-}
-.marker.end {
-  left: 265px;
-  top: 48px;
-  transform: translateZ(60px);
-}
-.elevator-shaft {
-  position: absolute;
-  left: 250px;
-  top: 30px;
-  width: 20px;
-  height: 140px;
-  transform: translateZ(0);
-  background: rgba(100, 120, 140, 0.25);
-  border: 1px solid #9fb0c2;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.15);
-}
-.elevator-car {
-  position: absolute;
-  left: 251px;
-  top: 100px;
-  width: 18px;
-  height: 20px;
-  background: #0a84ff;
-  border-radius: 3px;
-  transform: translateZ(0);
-  animation: lift 2.2s ease-in-out infinite alternate;
-}
-@keyframes lift {
-  0% {
-    transform: translateZ(0);
-  }
-  100% {
-    transform: translateZ(60px);
-  }
-}
-.guide-arrow {
-  position: absolute;
-  left: 30px;
-  top: 86px;
-  width: 16px;
-  height: 16px;
-  background: #0a84ff;
-  border-radius: 50%;
-  box-shadow: 0 0 12px rgba(10, 132, 255, 0.8);
-  transform: translateZ(0);
-  animation: routeAnim var(--routeDur) linear infinite;
-}
-@keyframes routeAnim {
-  0% {
-    left: 30px;
-    top: 86px;
-    transform: translateZ(0);
-  }
-  40% {
-    left: 250px;
-    top: 86px;
-    transform: translateZ(0);
-  }
-  50% {
-    left: 250px;
-    top: 60px;
-    transform: translateZ(60px);
-  }
-  100% {
-    left: 270px;
-    top: 56px;
-    transform: translateZ(60px);
-  }
-}
-.route-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.route-step {
-  font-size: 13px;
-  color: #333;
-  padding: 8px;
-  border: 1px dashed #d0d7e2;
-  border-radius: 8px;
-  background: #f7fbff;
 }
 </style>

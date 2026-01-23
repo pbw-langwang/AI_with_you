@@ -27,6 +27,8 @@ export const appState = reactive<AppState>({
   ui: {
     text: "",
     subTitleText: "",
+    routeTravel: 0,
+    routeResetToken: 0,
   },
 });
 
@@ -237,32 +239,53 @@ export class AppStore {
       if (!llm.apiKey || llm.model === "trae-assistant") {
         if (floorIntent) {
           await this.waitForAvatarReady();
+          appState.ui.routeTravel = 0;
+          appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
           appState.ui.subTitleText = "为您规划从 1楼 到 2楼的路线";
-          const speakText =
-            "好的，为您规划从一楼到二楼的路线。请从一楼大厅前往电梯间，乘坐电梯到二楼，沿二楼走廊前往目的地。";
+          const intro = "好的，为您规划从一楼到二楼的路线。";
+          const parts = [
+            "1、请从起点位置按照指示行走",
+            "2、通过一楼大厅前往电梯间。",
+            "3、乘坐电梯到二楼。",
+            "4、沿二楼走廊前往目的地。",
+          ];
           const dur = Math.max(
-            6,
-            Math.min(18, Math.round(speakText.length / 10)),
+            8,
+            Math.min(
+              22,
+              Math.round((intro.length + parts.join("").length) / 10),
+            ),
           );
           appState.ui.routeGuide = {
             visible: true,
             title: "从1楼到2楼的立体路线",
             steps: [
-              "从1楼大厅前往电梯间",
-              "乘坐电梯到2楼",
-              "沿2楼走廊前往目的地",
+              "从起点位置按照指示行走",
+              "通过一楼大厅前往电梯间",
+              "乘坐电梯到二楼",
+              "沿二楼走廊前往目的地",
             ],
             mode: "floors",
             durationSec: dur,
           };
-          const ssml = generateSSML(speakText);
-          avatar.instance.speak(ssml, true, true);
-          return speakText;
+          avatar.instance.speak(generateSSML(intro), true, false);
+          for (let i = 0; i < parts.length; i++) {
+            const isLast = i === parts.length - 1;
+            avatar.instance.speak(generateSSML(parts[i]), false, isLast);
+          }
+          return parts.join(" ");
         }
         if (deptMatch) {
           const dept = deptMatch[1];
           await this.waitForAvatarReady();
+          appState.ui.routeTravel = 0;
+          appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
           appState.ui.subTitleText = `为您规划到 ${dept} 的路线`;
+          const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利。`;
+          const dur = Math.max(
+            6,
+            Math.min(20, Math.round(speakText.length / 10)),
+          );
           appState.ui.routeGuide = {
             visible: true,
             title: `到 ${dept} 的路线引导`,
@@ -274,10 +297,23 @@ export class AppStore {
               "到达科室门口",
             ],
             mode: "department",
+            durationSec: dur,
           };
-          const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅，穿过大厅到电梯间，乘电梯至对应楼层，沿走廊前往${dept}科室。祝您就诊顺利。`;
-          const ssml = generateSSML(speakText);
-          avatar.instance.speak(ssml, true, true);
+          const parts = speakText
+            .split(/[。！？,.，]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (parts.length > 0) {
+            avatar.instance.speak(
+              generateSSML(parts[0]),
+              true,
+              parts.length === 1,
+            );
+            for (let i = 1; i < parts.length; i++) {
+              const isLast = i === parts.length - 1;
+              avatar.instance.speak(generateSSML(parts[i]), false, isLast);
+            }
+          }
           return speakText;
         }
       }
