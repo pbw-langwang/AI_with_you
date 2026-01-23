@@ -42,10 +42,12 @@ function detectStepIdx(text: string): number {
     const g = guide[i].replace(/\s+/g, "");
     if (cleaned.includes(g) || text.includes(guide[i])) return i + 1;
   }
-  if (/起点位置/.test(text)) return 1;
-  if (/大厅.*电梯间|电梯间/.test(text)) return 2;
-  if (/电梯/.test(text)) return 3;
-  if (/走廊|目的地|科室/.test(text)) return 4;
+
+  const t = cleaned;
+  if (/入口/.test(t)) return 1;
+  if (/按照图中/.test(t)) return 2;
+  if (/乘电梯/.test(t)) return 3;
+  if (/走廊/.test(t)) return 4;
   return 0;
 }
 

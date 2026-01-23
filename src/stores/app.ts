@@ -32,109 +32,6 @@ export const appState = reactive<AppState>({
   },
 });
 
-const MIN_SPLIT_LENGTH = 2; // 最小切分长度
-const MAX_SPLIT_LENGTH = 20; // 最大切分长度
-function splitSentence(text: string): string[] {
-  if (!text) return [];
-
-  // 定义中文标点（不需要空格）
-  const chinesePunctuations = new Set([
-    "、",
-    "，",
-    "：",
-    "；",
-    "。",
-    "？",
-    "！",
-    "…",
-    "\n",
-  ]);
-  // 定义英文标点（需要后跟空格）
-  const englishPunctuations = new Set([",", ":", ";", ".", "?", "!"]);
-
-  let count = 0;
-  let firstValidPunctAfterMin = -1; // 最小长度后第一个有效标点位置
-  let forceBreakIndex = -1; // 强制切分位置
-  let i = 0;
-  const n = text.length;
-
-  // 扫描文本直到达到最大长度或文本结束
-  while (i < n && count < MAX_SPLIT_LENGTH) {
-    const char = text[i];
-
-    // 处理汉字
-    if (char >= "\u4e00" && char <= "\u9fff") {
-      count++;
-      // 记录达到最大长度时的位置
-      if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i + 1; // 在汉字后切分
-      }
-      i++;
-    }
-    // 处理数字序列
-    else if (char >= "0" && char <= "9") {
-      count++;
-      if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i + 1;
-      }
-      i++;
-    }
-    // 处理英文字母序列（单词）
-    else if ((char >= "a" && char <= "z") || (char >= "A" && char <= "Z")) {
-      // 扫描整个英文单词
-      i++;
-      while (
-        i < n &&
-        ((text[i] >= "a" && text[i] <= "z") ||
-          (text[i] >= "A" && text[i] <= "Z"))
-      ) {
-        i++;
-      }
-      count++;
-      if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i; // 在单词后切分
-      }
-    }
-    // 处理标点符号
-    else {
-      if (chinesePunctuations.has(char)) {
-        // 达到最小长度后记录第一个有效中文标点
-        if (count >= MIN_SPLIT_LENGTH && firstValidPunctAfterMin === -1) {
-          firstValidPunctAfterMin = i;
-        }
-        i++;
-      } else if (englishPunctuations.has(char)) {
-        // 英文标点：检查后跟空格或结束
-        if (i + 1 >= n || text[i + 1] === " ") {
-          // 达到最小长度后记录第一个有效英文标点
-          if (count >= MIN_SPLIT_LENGTH && firstValidPunctAfterMin === -1) {
-            firstValidPunctAfterMin = i;
-          }
-        }
-        i++;
-      } else {
-        // 其他字符（如空格、符号等），跳过
-        i++;
-      }
-    }
-  }
-
-  // 确定切分位置
-  let splitIndex = -1;
-  if (firstValidPunctAfterMin !== -1) {
-    splitIndex = firstValidPunctAfterMin + 1;
-  } else if (forceBreakIndex !== -1) {
-    splitIndex = forceBreakIndex;
-  }
-
-  // 返回切分结果
-  if (splitIndex > 0 && splitIndex < text.length) {
-    return [text.substring(0, splitIndex), text.substring(splitIndex)];
-  }
-
-  return [text];
-}
-
 // 虚拟人状态
 export const avatarState = ref("");
 
@@ -241,7 +138,7 @@ export class AppStore {
         appState.ui.routeTravel = 0;
         appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
         appState.ui.subTitleText = `为您规划到 ${dept}科室 的路线`;
-        const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利。`;
+        const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。按照图中指示，穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利。`;
         const dur = Math.max(
           6,
           Math.min(20, Math.round(speakText.length / 10)),
@@ -251,7 +148,7 @@ export class AppStore {
           title: `到 ${dept}科室 的路线引导`,
           steps: [
             "从入口进入大厅",
-            "穿过大厅到电梯间",
+            "按照图中指示，穿过大厅到电梯间",
             "乘电梯至对应楼层",
             `沿走廊前往 ${dept} 科室`,
             "到达科室门口",
@@ -260,9 +157,9 @@ export class AppStore {
           durationSec: dur,
         };
         const parts = speakText
-          .split(/[。！？,.，]/)
-          .map((s) => s.trim())
-          .filter(Boolean);
+          .match(/[^。！？,.，]+[。！？,.，]?/g)
+          ?.map((s) => s.trim())
+          .filter(Boolean) ?? [speakText];
         if (parts.length > 0) {
           avatar.instance.speak(
             generateSSML(parts[0]),
@@ -292,21 +189,31 @@ export class AppStore {
 
       let buffer = "";
       let isFirstChunk = true;
+      const takeSentence = (s: string): [string | null, string] => {
+        const n = s.length;
+        for (let i = 0; i < n; i++) {
+          const ch = s[i];
+          if (/[。！？!?.,，；;…]/.test(ch)) {
+            const idx = i + 1;
+            return [s.slice(0, idx), s.slice(idx)];
+          }
+        }
+        return [null, s];
+      };
 
       for await (const chunk of stream) {
         buffer += chunk;
-        const arr = splitSentence(buffer);
-
-        if (arr.length > 1) {
-          const ssml = generateSSML(arr[0] || "");
+        while (true) {
+          const [head, tail] = takeSentence(buffer);
+          if (!head) break;
+          const ssml = generateSSML(head);
           if (isFirstChunk) {
             avatar.instance.speak(ssml, true, false);
             isFirstChunk = false;
           } else {
             avatar.instance.speak(ssml, false, false);
           }
-
-          buffer = arr[1] || "";
+          buffer = tail;
         }
       }
 
