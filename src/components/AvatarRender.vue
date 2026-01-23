@@ -108,8 +108,8 @@ const containerId = computed(() => avatarService.getContainerId());
 }
 .subtitle {
   position: absolute;
-  z-index: 100;
-  bottom: 220px;
+  z-index: 1001;
+  top: 24px;
   left: 50%;
   width: 375px;
   max-width: 90%;
@@ -127,7 +127,7 @@ const containerId = computed(() => avatarService.getContainerId());
 .diagnosis-panel {
   position: absolute;
   left: 50%;
-  bottom: 24px;
+  top: 24px;
   transform: translateX(-50%);
   width: 720px;
   max-width: 92%;
@@ -136,6 +136,7 @@ const containerId = computed(() => avatarService.getContainerId());
   border-radius: 16px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   padding: 16px;
+  z-index: 1001;
 }
 .diag-line {
   font-size: 16px;
