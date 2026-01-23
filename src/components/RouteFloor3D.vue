@@ -96,6 +96,38 @@ function buildScene(el: HTMLDivElement) {
     { a: new THREE.Vector3(40, 18, 0), b: new THREE.Vector3(-25, 18, 0) },
   ];
 
+  function addFloorPlane(yLevel: number) {
+    let minX = Infinity,
+      maxX = -Infinity,
+      minZ = Infinity,
+      maxZ = -Infinity;
+    for (const s of segs!) {
+      const ay = s.a.y,
+        by = s.b.y;
+      if (Math.abs(ay - yLevel) < 1e-3 && Math.abs(by - yLevel) < 1e-3) {
+        minX = Math.min(minX, s.a.x, s.b.x);
+        maxX = Math.max(maxX, s.a.x, s.b.x);
+        minZ = Math.min(minZ, s.a.z, s.b.z);
+        maxZ = Math.max(maxZ, s.a.z, s.b.z);
+      }
+    }
+    if (!isFinite(minX) || !isFinite(minZ)) return;
+    const outward = pathWidth / 2 + pathWidth + 12 + 3;
+    const w = Math.max(1, maxX - minX + outward * 2);
+    const h = Math.max(1, maxZ - minZ + outward * 2);
+    const geo = new THREE.PlaneGeometry(w, h);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x99b6ff,
+      transparent: true,
+      opacity: 0.18,
+      side: THREE.DoubleSide,
+    });
+    const plane = new THREE.Mesh(geo, mat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set((minX + maxX) / 2, yLevel - 1, (minZ + maxZ) / 2);
+    scene!.add(plane);
+  }
+
   function addRectPath(seg: { a: THREE.Vector3; b: THREE.Vector3 }) {
     const dx = seg.b.x - seg.a.x;
     const dy = seg.b.y - seg.a.y;
@@ -141,6 +173,8 @@ function buildScene(el: HTMLDivElement) {
     addRectPath(s);
     if (i > 0) addCornerPlug(s);
   }
+  addFloorPlane(2);
+  addFloorPlane(18);
   segLens = segs.map((s) => s.a.distanceTo(s.b));
   step1EndIdx = 0;
   step2EndIdx = 5;
@@ -216,6 +250,202 @@ function buildScene(el: HTMLDivElement) {
     scene.add(walker);
   }
 
+  // 路径附近少量白方块（两侧少量，表现走廊感）
+  let feePlaced = false;
+  let roomCount1F = 0;
+  let labCount2F = 0;
+  const blockH = 8;
+  const lateralThick = 12;
+  const leaveGap = pathWidth; // 保留与路径、科室之间的空隙等于路径宽
+  function createEdgeBlock(
+    text: string,
+    pos: THREE.Vector3,
+    dims: { w: number; h: number; d: number },
+  ) {
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(dims.w, dims.h, dims.d),
+      new THREE.MeshPhongMaterial({ color: 0xffffff }),
+    );
+    box.position.copy(pos);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
+    const font = "bold 16px sans-serif";
+    ctx.font = font;
+    const paddingX = 6;
+    const paddingY = 4;
+    const tW = Math.ceil(ctx.measureText(text).width);
+    const tH = 20;
+    canvas.width = tW + paddingX * 2;
+    canvas.height = tH + paddingY * 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#222";
+    ctx.textBaseline = "middle";
+    ctx.font = font;
+    ctx.fillText(text, (canvas.width - tW) / 2, canvas.height / 2);
+    const tex = new THREE.CanvasTexture(canvas);
+    const labelW = 22;
+    const labelD = 12;
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(labelW, labelD),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true }),
+    );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(pos.x, pos.y + dims.h / 2 + 0.05, pos.z);
+    const group = new THREE.Group();
+    group.add(box);
+    group.add(plane);
+    scene!.add(group);
+  }
+  const minLenForBlock = pathWidth * 8;
+  const placedAABBs: {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+    y: number;
+  }[] = [];
+  segs!.forEach((s) => {
+    const dx = s.b.x - s.a.x;
+    const dy = s.b.y - s.a.y;
+    const dz = s.b.z - s.a.z;
+    const isVertical =
+      Math.abs(dy) > 0 && Math.abs(dx) === 0 && Math.abs(dz) === 0;
+    if (isVertical) return;
+    const len = Math.sqrt(dx * dx + dz * dz);
+    if (len < minLenForBlock) return;
+    const isAlongX = Math.abs(dx) > 0 && Math.abs(dz) === 0;
+    const cy = s.a.y;
+    const is2F = cy > 10;
+    const placeFeeLeft = !is2F && !feePlaced;
+    if (placeFeeLeft) feePlaced = true;
+    const tryTs = [0.35, 0.65, 0.5];
+    function intersects(
+      minX: number,
+      maxX: number,
+      minZ: number,
+      maxZ: number,
+      y: number,
+    ) {
+      for (const b of placedAABBs) {
+        if (Math.abs(b.y - y) > 0.5) continue;
+        if (
+          minX <= b.maxX &&
+          maxX >= b.minX &&
+          minZ <= b.maxZ &&
+          maxZ >= b.minZ
+        )
+          return true;
+      }
+      return false;
+    }
+    if (isAlongX) {
+      const blockLen = Math.max(4, (len - 2 * leaveGap) * 0.9);
+      const dims = { w: blockLen, h: blockH, d: lateralThick };
+      const offset = pathWidth / 2 + leaveGap + dims.d / 2;
+      for (const t of tryTs) {
+        const cx = s.a.x + dx * t;
+        const czL = s.a.z + dz * t + offset;
+        const minXL = cx - dims.w / 2,
+          maxXL = cx + dims.w / 2;
+        const minZL = czL - dims.d / 2,
+          maxZL = czL + dims.d / 2;
+        if (!intersects(minXL, maxXL, minZL, maxZL, cy)) {
+          const textL = placeFeeLeft
+            ? "收费室"
+            : is2F
+              ? `化验室${++labCount2F}`
+              : `科室${++roomCount1F}`;
+          createEdgeBlock(textL, new THREE.Vector3(cx, cy, czL), dims);
+          placedAABBs.push({
+            minX: minXL,
+            maxX: maxXL,
+            minZ: minZL,
+            maxZ: maxZL,
+            y: cy,
+          });
+          break;
+        }
+      }
+      if (!placeFeeLeft) {
+        for (const t of tryTs) {
+          const cx = s.a.x + dx * t;
+          const czR = s.a.z + dz * t - offset;
+          const minXR = cx - dims.w / 2,
+            maxXR = cx + dims.w / 2;
+          const minZR = czR - dims.d / 2,
+            maxZR = czR + dims.d / 2;
+          if (!intersects(minXR, maxXR, minZR, maxZR, cy)) {
+            const textR = is2F
+              ? `化验室${++labCount2F}`
+              : `科室${++roomCount1F}`;
+            createEdgeBlock(textR, new THREE.Vector3(cx, cy, czR), dims);
+            placedAABBs.push({
+              minX: minXR,
+              maxX: maxXR,
+              minZ: minZR,
+              maxZ: maxZR,
+              y: cy,
+            });
+            break;
+          }
+        }
+      }
+    } else {
+      const blockLen = Math.max(4, (len - 2 * leaveGap) * 0.9);
+      const dims = { w: lateralThick, h: blockH, d: blockLen };
+      const offset = pathWidth / 2 + leaveGap + dims.w / 2;
+      for (const t of tryTs) {
+        const cz = s.a.z + dz * t;
+        const cxL = s.a.x + dx * t + offset;
+        const minXL = cxL - dims.w / 2,
+          maxXL = cxL + dims.w / 2;
+        const minZL = cz - dims.d / 2,
+          maxZL = cz + dims.d / 2;
+        if (!intersects(minXL, maxXL, minZL, maxZL, cy)) {
+          const textL = placeFeeLeft
+            ? "收费室"
+            : is2F
+              ? `化验室${++labCount2F}`
+              : `科室${++roomCount1F}`;
+          createEdgeBlock(textL, new THREE.Vector3(cxL, cy, cz), dims);
+          placedAABBs.push({
+            minX: minXL,
+            maxX: maxXL,
+            minZ: minZL,
+            maxZ: maxZL,
+            y: cy,
+          });
+          break;
+        }
+      }
+      if (!placeFeeLeft) {
+        for (const t of tryTs) {
+          const cz = s.a.z + dz * t;
+          const cxR = s.a.x + dx * t - offset;
+          const minXR = cxR - dims.w / 2,
+            maxXR = cxR + dims.w / 2;
+          const minZR = cz - dims.d / 2,
+            maxZR = cz + dims.d / 2;
+          if (!intersects(minXR, maxXR, minZR, maxZR, cy)) {
+            const textR = is2F
+              ? `化验室${++labCount2F}`
+              : `科室${++roomCount1F}`;
+            createEdgeBlock(textR, new THREE.Vector3(cxR, cy, cz), dims);
+            placedAABBs.push({
+              minX: minXR,
+              maxX: maxXR,
+              minZ: minZR,
+              maxZ: maxZR,
+              y: cy,
+            });
+            break;
+          }
+        }
+      }
+    }
+  });
   animate();
 }
 
