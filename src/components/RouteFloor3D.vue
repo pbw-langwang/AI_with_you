@@ -77,41 +77,10 @@ function buildScene(el: HTMLDivElement) {
   dir.position.set(50, 100, 50);
   scene.add(dir);
 
-  const matFloor = new THREE.MeshPhongMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.35,
-  });
-  const floorGeo = new THREE.PlaneGeometry(220, 140);
-  const floor1 = new THREE.Mesh(floorGeo, matFloor);
-  floor1.rotation.x = -Math.PI / 2;
-  floor1.position.set(0, 0, 0);
-  scene.add(floor1);
-
-  const floor2 = new THREE.Mesh(floorGeo, matFloor);
-  floor2.rotation.x = -Math.PI / 2;
-  floor2.position.set(0, 20, 0);
-  scene.add(floor2);
-
-  const elevatorMat = new THREE.MeshPhongMaterial({
-    color: 0x9fb0c2,
-    transparent: true,
-    opacity: 0.25,
-  });
-  const elevator = new THREE.Mesh(new THREE.BoxGeometry(6, 30, 6), elevatorMat);
-  elevator.position.set(40, 15, 0);
-  scene.add(elevator);
-
-  const corridorWidth = 18;
-  const pathWidth = 8;
-  const wallHeight = 12;
+  // 仅保留路径
+  const pathWidth = 3.5;
   const pathThicknessY = 0.6;
   const pathColor = 0x0a84ff;
-  const wallMat = new THREE.MeshPhongMaterial({
-    color: 0x7fa8d2,
-    transparent: true,
-    opacity: 0.25,
-  });
 
   segs = [
     // 1F - “5”字型路径
@@ -135,24 +104,20 @@ function buildScene(el: HTMLDivElement) {
       Math.abs(dy) > 0 && Math.abs(dx) === 0 && Math.abs(dz) === 0;
     if (isVertical) {
       const len = Math.abs(dy);
-      const geo = new THREE.CylinderGeometry(
-        pathWidth / 6,
-        pathWidth / 6,
-        len,
-        12,
-      );
+      const geo = new THREE.BoxGeometry(pathWidth, len, pathWidth);
       const mat = new THREE.MeshPhongMaterial({ color: pathColor });
-      const cyl = new THREE.Mesh(geo, mat);
-      cyl.position.set(seg.a.x, (seg.a.y + seg.b.y) / 2, seg.a.z);
-      scene!.add(cyl);
+      const pillar = new THREE.Mesh(geo, mat);
+      pillar.position.set(seg.a.x, (seg.a.y + seg.b.y) / 2, seg.a.z);
+      scene!.add(pillar);
       return;
     }
     const len = Math.sqrt(dx * dx + dz * dz);
     const isAlongX = Math.abs(dx) > 0 && Math.abs(dz) === 0;
+    const join = Math.max(0.5, pathWidth * 0.125);
     const geo = new THREE.BoxGeometry(
-      isAlongX ? len : pathWidth,
+      isAlongX ? len + join : pathWidth,
       pathThicknessY,
-      isAlongX ? pathWidth : len,
+      isAlongX ? pathWidth : len + join,
     );
     const mat = new THREE.MeshPhongMaterial({ color: pathColor });
     const box = new THREE.Mesh(geo, mat);
@@ -163,69 +128,19 @@ function buildScene(el: HTMLDivElement) {
     );
     scene!.add(box);
   }
-  function addWalls(seg: { a: THREE.Vector3; b: THREE.Vector3 }) {
-    const dx = seg.b.x - seg.a.x;
-    const dy = seg.b.y - seg.a.y;
-    const dz = seg.b.z - seg.a.z;
-    const isVertical =
-      Math.abs(dy) > 0 && Math.abs(dx) === 0 && Math.abs(dz) === 0;
-    if (isVertical) return;
-    const len = Math.sqrt(dx * dx + dz * dz);
-    const isAlongX = Math.abs(dx) > 0 && Math.abs(dz) === 0;
-    const wallLen = len;
-    const wallThick = 1.2;
-    const offset = corridorWidth / 2;
-    const wallGeo = new THREE.BoxGeometry(
-      isAlongX ? wallLen : wallThick,
-      wallHeight,
-      isAlongX ? wallThick : wallLen,
-    );
-    const midX = (seg.a.x + seg.b.x) / 2;
-    const midY = seg.a.y + wallHeight / 2;
-    const midZ = (seg.a.z + seg.b.z) / 2;
-    const w1 = new THREE.Mesh(wallGeo, wallMat);
-    const w2 = new THREE.Mesh(wallGeo, wallMat);
-    if (isAlongX) {
-      w1.position.set(midX, midY, midZ + offset);
-      w2.position.set(midX, midY, midZ - offset);
-    } else {
-      w1.position.set(midX + offset, midY, midZ);
-      w2.position.set(midX - offset, midY, midZ);
-    }
-    scene!.add(w1);
-    scene!.add(w2);
+  function addCornerPlug(curr: { a: THREE.Vector3; b: THREE.Vector3 }) {
+    const joinPos = curr.a;
+    const geo = new THREE.BoxGeometry(pathWidth, pathThicknessY, pathWidth);
+    const mat = new THREE.MeshPhongMaterial({ color: pathColor });
+    const plug = new THREE.Mesh(geo, mat);
+    plug.position.set(joinPos.x, joinPos.y + 0.1, joinPos.z);
+    scene!.add(plug);
   }
-  function createTextSprite(text: string) {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d")!;
-    canvas.width = 512;
-    canvas.height = 128;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#222";
-    ctx.font = "bold 48px sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 32, canvas.height / 2);
-    const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(64, 16, 1);
-    return sprite;
-  }
-  segs.forEach((s) => {
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i];
     addRectPath(s);
-    addWalls(s);
-  });
-  const deptA = createTextSprite("挂号处");
-  deptA.position.set(-50, 6, -20);
-  scene.add(deptA);
-  const deptB = createTextSprite("诊室A");
-  deptB.position.set(50, 24, 32);
-  scene.add(deptB);
-  const deptC = createTextSprite("化验室");
-  deptC.position.set(-25, 24, -8);
-  scene.add(deptC);
+    if (i > 0) addCornerPlug(s);
+  }
   segLens = segs.map((s) => s.a.distanceTo(s.b));
   step1EndIdx = 0;
   step2EndIdx = 5;
@@ -251,11 +166,13 @@ function buildScene(el: HTMLDivElement) {
   endMarker.position.copy(segs[segs.length - 1].b);
   scene.add(endMarker);
 
+  // 仅保留路径与箭头
   arrow = new THREE.Mesh(
     new THREE.ConeGeometry(3, 8, 16),
     new THREE.MeshPhongMaterial({ color: 0x0a84ff }),
   );
   arrow.rotation.x = Math.PI / 2;
+
   // 初始位置按持久化路程设置
   {
     let acc = 0;
@@ -276,28 +193,28 @@ function buildScene(el: HTMLDivElement) {
     const up = new THREE.Vector3(0, 1, 0);
     const q = new THREE.Quaternion().setFromUnitVectors(up, dirVec);
     arrow.quaternion.copy(q);
-    if (walker) {
-      walker.position.copy(pos.clone().add(new THREE.Vector3(0, 3, 0)));
-      const yaw = Math.atan2(dirVec.x, dirVec.z);
-      walker.rotation.set(0, yaw, 0);
-    }
   }
   scene.add(arrow);
 
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(2, 2, 6, 16),
-    new THREE.MeshPhongMaterial({ color: 0x333333 }),
-  );
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(2.2, 16, 16),
-    new THREE.MeshPhongMaterial({ color: 0x555555 }),
-  );
-  head.position.y = 4.5;
-  walker = new THREE.Group();
-  walker.add(body);
-  walker.add(head);
-  // walker 初始位置已在上面根据 travelAccum 设置过
-  scene.add(walker);
+  // 恢复小人
+  {
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(2, 2, 6, 16),
+      new THREE.MeshPhongMaterial({ color: 0x333333 }),
+    );
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2, 16, 16),
+      new THREE.MeshPhongMaterial({ color: 0x555555 }),
+    );
+    head.position.y = 4.5;
+    walker = new THREE.Group();
+    walker.add(body);
+    walker.add(head);
+    walker.position.copy(
+      arrow.position.clone().add(new THREE.Vector3(0, 3, 0)),
+    );
+    scene.add(walker);
+  }
 
   animate();
 }
@@ -420,7 +337,7 @@ watch(
     lastSubtitle = "";
     lastStepIdx = 0;
     appState.ui.routeTravel = 0;
-    if (segs && segs.length && arrow && walker) {
+    if (segs && segs.length && arrow) {
       const pos = segs[0].a.clone();
       arrow.position.copy(pos);
       const dirVec = new THREE.Vector3()
@@ -429,8 +346,10 @@ watch(
       const up = new THREE.Vector3(0, 1, 0);
       const q = new THREE.Quaternion().setFromUnitVectors(up, dirVec);
       arrow.quaternion.copy(q);
-      walker.position.copy(pos.clone().add(new THREE.Vector3(0, 3, 0)));
-      walker.rotation.set(0, Math.atan2(dirVec.x, dirVec.z), 0);
+      if (walker) {
+        walker.position.copy(pos.clone().add(new THREE.Vector3(0, 3, 0)));
+        walker.rotation.set(0, Math.atan2(dirVec.x, dirVec.z), 0);
+      }
     }
   },
 );

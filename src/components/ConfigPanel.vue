@@ -64,10 +64,9 @@
     </section>
     -->
 
-    <!-- LLM配置 -->
+    <!-- LLM配置（已隐藏）
     <section class="config-section">
       <h3 class="section-title">大语言模型配置</h3>
-
       <div class="form-group">
         <label>模型选择</label>
         <select v-model="appState.llm.model">
@@ -76,7 +75,6 @@
           </option>
         </select>
       </div>
-
       <div class="form-group">
         <label>API Key</label>
         <input
@@ -86,6 +84,7 @@
         />
       </div>
     </section>
+    -->
 
     <!-- 控制按钮 -->
     <section class="control-section">
@@ -155,7 +154,7 @@
 <script setup lang="ts">
 import { inject, ref } from "vue";
 // import { useAsr } from '../composables/useAsr'
-import { SUPPORTED_LLM_MODELS } from "../constants";
+// import { SUPPORTED_LLM_MODELS } from "../constants";
 import type { AppState, AppStore } from "../types";
 
 // 注入全局状态和方法
@@ -165,7 +164,7 @@ const appStore = inject<AppStore>("appStore")!;
 // 组件状态
 const isConnecting = ref(false);
 const isSending = ref(false);
-const supportedModels = SUPPORTED_LLM_MODELS;
+// const supportedModels = SUPPORTED_LLM_MODELS;
 
 // ASR Hook - 已禁用
 // const asrConfig = computed(() => ({
