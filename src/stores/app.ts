@@ -143,6 +143,10 @@ export class AppStore {
       if (deptMatch) {
         const dept = deptMatch[1];
         await this.waitForAvatarReady();
+        if (appState.ui.diagnosis?.active) {
+          appState.ui.diagnosis.active = false;
+          appState.ui.diagnosis.lines = [];
+        }
         appState.ui.routeTravel = 0;
         appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
         const { speakText, guide, subTitle } = buildRouteGuide(
@@ -170,6 +174,10 @@ export class AppStore {
       if (merchantMatch) {
         const merchant = merchantMatch[1];
         await this.waitForAvatarReady();
+        if (appState.ui.diagnosis?.active) {
+          appState.ui.diagnosis.active = false;
+          appState.ui.diagnosis.lines = [];
+        }
         appState.ui.routeTravel = 0;
         appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
         const { speakText, guide, subTitle } = buildRouteGuide(
