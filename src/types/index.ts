@@ -81,7 +81,7 @@ export interface AppState {
       visible: boolean;
       title: string;
       steps: string[];
-      mode?: "floors" | "department";
+      mode?: "department" | "merchant";
       durationSec?: number;
     };
   };

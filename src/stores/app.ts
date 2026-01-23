@@ -2,6 +2,7 @@ import { reactive, ref } from "vue";
 import type { AppState } from "../types";
 import { LLM_CONFIG, APP_CONFIG } from "../constants";
 import { validateConfig, delay, generateSSML } from "../utils";
+import { buildRouteGuide, splitSpeakParts } from "./routeBuilder";
 import { avatarService } from "../services/avatar";
 import { llmService } from "../services/llm";
 
@@ -137,29 +138,40 @@ export class AppStore {
         await this.waitForAvatarReady();
         appState.ui.routeTravel = 0;
         appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
-        appState.ui.subTitleText = `为您规划到 ${dept}科室 的路线`;
-        const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅。按照图中指示，穿过大厅到电梯间。乘电梯至对应楼层。沿走廊前往${dept}科室。祝您就诊顺利！`;
-        const dur = Math.max(
-          6,
-          Math.min(20, Math.round(speakText.length / 10)),
+        const { speakText, guide, subTitle } = buildRouteGuide(
+          "department",
+          dept,
         );
-        appState.ui.routeGuide = {
-          visible: true,
-          title: `到 ${dept}科室 的路线引导`,
-          steps: [
-            "从入口进入大厅",
-            "按照图中指示，穿过大厅到电梯间",
-            "乘电梯至对应楼层",
-            `沿走廊前往 ${dept} 科室`,
-            "到达科室门口",
-          ],
-          mode: "department",
-          durationSec: dur,
-        };
-        const parts = speakText
-          .match(/[^。！？,.，]+[。！？,.，]?/g)
-          ?.map((s) => s.trim())
-          .filter(Boolean) ?? [speakText];
+        appState.ui.subTitleText = subTitle;
+        appState.ui.routeGuide = guide;
+        const parts = splitSpeakParts(speakText);
+        if (parts.length > 0) {
+          avatar.instance.speak(
+            generateSSML(parts[0]),
+            true,
+            parts.length === 1,
+          );
+          for (let i = 1; i < parts.length; i++) {
+            const isLast = i === parts.length - 1;
+            avatar.instance.speak(generateSSML(parts[i]), false, isLast);
+          }
+        }
+        return speakText;
+      }
+
+      const merchantMatch = ui.text.match(/我要去(.+?)商家/);
+      if (merchantMatch) {
+        const merchant = merchantMatch[1];
+        await this.waitForAvatarReady();
+        appState.ui.routeTravel = 0;
+        appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
+        const { speakText, guide, subTitle } = buildRouteGuide(
+          "merchant",
+          merchant,
+        );
+        appState.ui.subTitleText = subTitle;
+        appState.ui.routeGuide = guide;
+        const parts = splitSpeakParts(speakText);
         if (parts.length > 0) {
           avatar.instance.speak(
             generateSSML(parts[0]),

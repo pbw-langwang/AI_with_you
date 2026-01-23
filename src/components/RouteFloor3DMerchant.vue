@@ -356,10 +356,10 @@ function buildScene(el: HTMLDivElement) {
           maxZL = czL + dims.d / 2;
         if (!intersects(minXL, maxXL, minZL, maxZL, cy)) {
           const textL = placeFeeLeft
-            ? "收费室"
+            ? "1楼商家"
             : is2F
-              ? `化验室${++labCount2F}`
-              : `科室${++roomCount1F}`;
+              ? `2楼商家${++labCount2F}`
+              : `1楼商家${++roomCount1F}`;
           createEdgeBlock(textL, new THREE.Vector3(cx, cy, czL), dims);
           placedAABBs.push({
             minX: minXL,
@@ -381,8 +381,8 @@ function buildScene(el: HTMLDivElement) {
             maxZR = czR + dims.d / 2;
           if (!intersects(minXR, maxXR, minZR, maxZR, cy)) {
             const textR = is2F
-              ? `化验室${++labCount2F}`
-              : `科室${++roomCount1F}`;
+              ? `2楼商家${++labCount2F}`
+              : `1楼商家${++roomCount1F}`;
             createEdgeBlock(textR, new THREE.Vector3(cx, cy, czR), dims);
             placedAABBs.push({
               minX: minXR,
@@ -408,10 +408,10 @@ function buildScene(el: HTMLDivElement) {
           maxZL = cz + dims.d / 2;
         if (!intersects(minXL, maxXL, minZL, maxZL, cy)) {
           const textL = placeFeeLeft
-            ? "收费室"
+            ? "1楼商家"
             : is2F
-              ? `化验室${++labCount2F}`
-              : `科室${++roomCount1F}`;
+              ? `2楼商家${++labCount2F}`
+              : `1楼商家${++roomCount1F}`;
           createEdgeBlock(textL, new THREE.Vector3(cxL, cy, cz), dims);
           placedAABBs.push({
             minX: minXL,
@@ -433,8 +433,8 @@ function buildScene(el: HTMLDivElement) {
             maxZR = cz + dims.d / 2;
           if (!intersects(minXR, maxXR, minZR, maxZR, cy)) {
             const textR = is2F
-              ? `化验室${++labCount2F}`
-              : `科室${++roomCount1F}`;
+              ? `2楼商家${++labCount2F}`
+              : `1楼商家${++roomCount1F}`;
             createEdgeBlock(textR, new THREE.Vector3(cxR, cy, cz), dims);
             placedAABBs.push({
               minX: minXR,

@@ -1,10 +1,19 @@
 <template>
   <div ref="containerRef" class="avatar-render">
     <!-- 全屏路线覆盖层 -->
+    <RouteFloor3DMerchant
+      v-if="
+        appState.ui.routeGuide?.visible &&
+        appState.ui.routeGuide?.mode === 'merchant'
+      "
+      :durationSec="appState.ui.routeGuide?.durationSec"
+      :key="`merchant-${appState.ui.routeResetToken}`"
+      class="route-floor-overlay"
+    />
     <RouteFloor3D
-      v-if="appState.ui.routeGuide?.visible"
-      :durationSec="appState.ui.routeGuide!.durationSec"
-      :key="appState.ui.routeResetToken"
+      v-else-if="appState.ui.routeGuide?.visible"
+      :durationSec="appState.ui.routeGuide?.durationSec"
+      :key="`dept-${appState.ui.routeResetToken}`"
       class="route-floor-overlay"
     />
 
@@ -45,6 +54,7 @@ import type { AppState } from "../types";
 import siriIcon from "../assets/siri.png";
 import RouteGuide from "./RouteGuide.vue";
 import RouteFloor3D from "./RouteFloor3D.vue";
+import RouteFloor3DMerchant from "./RouteFloor3DMerchant.vue";
 
 // 注入全局状态
 const appState = inject<AppState>("appState")!;
