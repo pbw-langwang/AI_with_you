@@ -4,6 +4,7 @@ import { LLM_CONFIG, APP_CONFIG } from "../constants";
 import { validateConfig, delay, generateSSML } from "../utils";
 import { buildRouteGuide, splitSpeakParts } from "./routeBuilder";
 import { avatarService } from "../services/avatar";
+import { isDiagnosisTrigger, runDiagnosis } from "./diagnosis";
 import { llmService } from "../services/llm";
 
 // 应用状态
@@ -30,6 +31,7 @@ export const appState = reactive<AppState>({
     subTitleText: "",
     routeTravel: 0,
     routeResetToken: 0,
+    diagnosis: { active: false, lines: [] },
   },
 });
 
@@ -184,6 +186,12 @@ export class AppStore {
           }
         }
         return speakText;
+      }
+
+      if (isDiagnosisTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runDiagnosis(appState);
+        return textOut;
       }
 
       const stream = await llmService.sendMessageWithStream(

@@ -18,10 +18,19 @@
     />
 
     <!-- SDK 渲染容器 -->
-    <div :id="containerId" class="sdk-container" />
+    <div
+      :id="containerId"
+      class="sdk-container"
+      :class="
+        appState.ui.diagnosis?.active ? 'sdk-container--center-large' : ''
+      "
+    />
 
     <!-- 字幕显示 -->
-    <div v-show="appState.ui.subTitleText" class="subtitle">
+    <div
+      v-show="appState.ui.subTitleText && !appState.ui.diagnosis?.active"
+      class="subtitle"
+    >
       {{ appState.ui.subTitleText }}
     </div>
 
@@ -44,6 +53,11 @@
         durationSec: appState.ui.routeGuide!.durationSec,
       }"
     />
+    <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
+      <div class="diag-line">{{ appState.ui.diagnosis!.lines[0] }}</div>
+      <div class="diag-line">{{ appState.ui.diagnosis!.lines[1] }}</div>
+      <div class="diag-line strong">{{ appState.ui.diagnosis!.lines[2] }}</div>
+    </div>
   </div>
 </template>
 
@@ -84,6 +98,14 @@ const containerId = computed(() => avatarService.getContainerId());
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
+.sdk-container--center-large {
+  left: 50%;
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 720px;
+  height: 960px;
+}
 .subtitle {
   position: absolute;
   z-index: 100;
@@ -101,6 +123,28 @@ const containerId = computed(() => avatarService.getContainerId());
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
+}
+.diagnosis-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: 720px;
+  max-width: 92%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #d0d7e2;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+}
+.diag-line {
+  font-size: 16px;
+  color: #333;
+  padding: 8px 10px;
+}
+.diag-line.strong {
+  font-weight: 600;
+  color: #0a84ff;
 }
 .voice-animation {
   position: absolute;

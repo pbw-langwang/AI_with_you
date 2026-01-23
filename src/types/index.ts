@@ -84,6 +84,10 @@ export interface AppState {
       mode?: "department" | "merchant";
       durationSec?: number;
     };
+    diagnosis?: {
+      active: boolean;
+      lines: string[];
+    };
   };
 }
 
