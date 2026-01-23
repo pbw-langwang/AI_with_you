@@ -4,7 +4,12 @@ import { LLM_CONFIG, APP_CONFIG } from "../constants";
 import { validateConfig, delay, generateSSML } from "../utils";
 import { buildRouteGuide, splitSpeakParts } from "./routeBuilder";
 import { avatarService } from "../services/avatar";
-import { isDiagnosisTrigger, runDiagnosis } from "./diagnosis";
+import {
+  isDiagnosisTrigger,
+  runDiagnosis,
+  isMallFunTrigger,
+  runMallFun,
+} from "./diagnosis";
 import { llmService } from "../services/llm";
 
 // 应用状态
@@ -186,6 +191,12 @@ export class AppStore {
           }
         }
         return speakText;
+      }
+
+      if (isMallFunTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runMallFun(appState);
+        return textOut;
       }
 
       if (isDiagnosisTrigger(ui.text)) {
