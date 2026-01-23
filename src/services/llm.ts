@@ -79,8 +79,18 @@ class LlmService {
    * @throws {Error} - 当LLM客户端未初始化或请求失败时抛出错误
    */
   async sendMessageWithStream(config: LlmConfig, userMessage: string): Promise<AsyncIterable<string>> {
+    // 本地“Trae Assistant”模型：无需调用外部API
+    if (config.model === 'trae-assistant') {
+      const reply = `Trae Assistant：已禁用语音接入。你的输入：${userMessage}`
+      return (async function* () {
+        // 简单流式：分两段输出
+        const mid = Math.max(1, Math.floor(reply.length / 2))
+        yield reply.slice(0, mid)
+        yield reply.slice(mid)
+      })()
+    }
+
     this.initClient(config)
-    
     if (!this.openai) {
       throw new Error('LLM客户端未初始化')
     }

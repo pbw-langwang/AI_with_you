@@ -34,7 +34,8 @@ export const SDK_CONFIG = {
 
 // 支持的LLM模型列表
 export const SUPPORTED_LLM_MODELS = [
-  'doubao-1-5-pro-32k-250115'
+  'doubao-1-5-pro-32k-250115',
+  'trae-assistant'
 ] as const
 
 // 支持的ASR提供商

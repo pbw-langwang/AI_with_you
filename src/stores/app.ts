@@ -1,83 +1,96 @@
-import { reactive, ref } from 'vue'
-import type { AppState, AvatarConfig, AsrConfig, LlmConfig } from '../types'
-import { LLM_CONFIG, APP_CONFIG } from '../constants'
-import { validateConfig, delay, generateSSML } from '../utils'
-import { avatarService } from '../services/avatar'
-import { llmService } from '../services/llm'
+import { reactive, ref } from "vue";
+import type { AppState } from "../types";
+import { LLM_CONFIG, APP_CONFIG } from "../constants";
+import { validateConfig, delay, generateSSML } from "../utils";
+import { avatarService } from "../services/avatar";
+import { llmService } from "../services/llm";
 
 // 应用状态
 export const appState = reactive<AppState>({
   avatar: {
-    appId: '',
-    appSecret: '',
+    appId: "1749f2b1661b4134ab4964d27820417a",
+    appSecret: "c8122b00df3041459137462c4ceaf3d5",
     connected: false,
-    instance: null
+    instance: null,
   },
   asr: {
-    provider: 'tx',
-    appId: '',
-    secretId: '',
-    secretKey: '',
-    isListening: false
+    provider: "tx",
+    appId: "",
+    secretId: "",
+    secretKey: "",
+    isListening: false,
   },
   llm: {
     model: LLM_CONFIG.DEFAULT_MODEL,
-    apiKey: ''
+    apiKey: "",
   },
   ui: {
-    text: '',
-    subTitleText: ''
-  }
-})
+    text: "",
+    subTitleText: "",
+  },
+});
 
-const MIN_SPLIT_LENGTH = 2 // 最小切分长度
-const MAX_SPLIT_LENGTH = 20 // 最大切分长度
+const MIN_SPLIT_LENGTH = 2; // 最小切分长度
+const MAX_SPLIT_LENGTH = 20; // 最大切分长度
 function splitSentence(text: string): string[] {
-  if (!text) return []
+  if (!text) return [];
 
   // 定义中文标点（不需要空格）
-  const chinesePunctuations = new Set(['、', '，', '：', '；', '。', '？', '！', '…', '\n'])
+  const chinesePunctuations = new Set([
+    "、",
+    "，",
+    "：",
+    "；",
+    "。",
+    "？",
+    "！",
+    "…",
+    "\n",
+  ]);
   // 定义英文标点（需要后跟空格）
-  const englishPunctuations = new Set([',', ':', ';', '.', '?', '!'])
+  const englishPunctuations = new Set([",", ":", ";", ".", "?", "!"]);
 
-  let count = 0
-  let firstValidPunctAfterMin = -1 // 最小长度后第一个有效标点位置
-  let forceBreakIndex = -1 // 强制切分位置
-  let i = 0
-  const n = text.length
+  let count = 0;
+  let firstValidPunctAfterMin = -1; // 最小长度后第一个有效标点位置
+  let forceBreakIndex = -1; // 强制切分位置
+  let i = 0;
+  const n = text.length;
 
   // 扫描文本直到达到最大长度或文本结束
   while (i < n && count < MAX_SPLIT_LENGTH) {
-    const char = text[i]
+    const char = text[i];
 
     // 处理汉字
-    if (char >= '\u4e00' && char <= '\u9fff') {
-      count++
+    if (char >= "\u4e00" && char <= "\u9fff") {
+      count++;
       // 记录达到最大长度时的位置
       if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i + 1 // 在汉字后切分
+        forceBreakIndex = i + 1; // 在汉字后切分
       }
-      i++
+      i++;
     }
     // 处理数字序列
-    else if (char >= '0' && char <= '9') {
-      count++
+    else if (char >= "0" && char <= "9") {
+      count++;
       if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i + 1
+        forceBreakIndex = i + 1;
       }
-      i++
+      i++;
     }
     // 处理英文字母序列（单词）
-    else if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')) {
+    else if ((char >= "a" && char <= "z") || (char >= "A" && char <= "Z")) {
       // 扫描整个英文单词
-      const start = i
-      i++
-      while (i < n && ((text[i] >= 'a' && text[i] <= 'z') || (text[i] >= 'A' && text[i] <= 'Z'))) {
-        i++
+      i++;
+      while (
+        i < n &&
+        ((text[i] >= "a" && text[i] <= "z") ||
+          (text[i] >= "A" && text[i] <= "Z"))
+      ) {
+        i++;
       }
-      count++
+      count++;
       if (count === MAX_SPLIT_LENGTH) {
-        forceBreakIndex = i // 在单词后切分
+        forceBreakIndex = i; // 在单词后切分
       }
     }
     // 处理标点符号
@@ -85,43 +98,43 @@ function splitSentence(text: string): string[] {
       if (chinesePunctuations.has(char)) {
         // 达到最小长度后记录第一个有效中文标点
         if (count >= MIN_SPLIT_LENGTH && firstValidPunctAfterMin === -1) {
-          firstValidPunctAfterMin = i
+          firstValidPunctAfterMin = i;
         }
-        i++
+        i++;
       } else if (englishPunctuations.has(char)) {
         // 英文标点：检查后跟空格或结束
-        if (i + 1 >= n || text[i + 1] === ' ') {
+        if (i + 1 >= n || text[i + 1] === " ") {
           // 达到最小长度后记录第一个有效英文标点
           if (count >= MIN_SPLIT_LENGTH && firstValidPunctAfterMin === -1) {
-            firstValidPunctAfterMin = i
+            firstValidPunctAfterMin = i;
           }
         }
-        i++
+        i++;
       } else {
         // 其他字符（如空格、符号等），跳过
-        i++
+        i++;
       }
     }
   }
 
   // 确定切分位置
-  let splitIndex = -1
+  let splitIndex = -1;
   if (firstValidPunctAfterMin !== -1) {
-    splitIndex = firstValidPunctAfterMin + 1
+    splitIndex = firstValidPunctAfterMin + 1;
   } else if (forceBreakIndex !== -1) {
-    splitIndex = forceBreakIndex
+    splitIndex = forceBreakIndex;
   }
 
   // 返回切分结果
   if (splitIndex > 0 && splitIndex < text.length) {
-    return [text.substring(0, splitIndex), text.substring(splitIndex)]
+    return [text.substring(0, splitIndex), text.substring(splitIndex)];
   }
-  
-  return [text]
+
+  return [text];
 }
 
 // 虚拟人状态
-export const avatarState = ref('')
+export const avatarState = ref("");
 
 // Store类 - 业务逻辑处理
 export class AppStore {
@@ -131,33 +144,36 @@ export class AppStore {
    * @throws {Error} - 当appId或appSecret为空或连接失败时抛出错误
    */
   async connectAvatar(): Promise<void> {
-    const { appId, appSecret } = appState.avatar
-    
-    if (!validateConfig({ appId, appSecret }, ['appId', 'appSecret'])) {
-      throw new Error('appId 或 appSecret 为空')
+    const { appId, appSecret } = appState.avatar;
+
+    if (!validateConfig({ appId, appSecret }, ["appId", "appSecret"])) {
+      throw new Error("appId 或 appSecret 为空");
     }
 
     try {
-      const avatar = await avatarService.connect({
-        appId,
-        appSecret
-      }, {
-        onSubtitleOn: (text: string) => {
-          appState.ui.subTitleText = text
+      const avatar = await avatarService.connect(
+        {
+          appId,
+          appSecret,
         },
-        onSubtitleOff: () => {
-          appState.ui.subTitleText = ''
+        {
+          onSubtitleOn: (text: string) => {
+            appState.ui.subTitleText = text;
+          },
+          onSubtitleOff: () => {
+            appState.ui.subTitleText = "";
+          },
+          onStateChange: (state: string) => {
+            avatarState.value = state;
+          },
         },
-        onStateChange: (state: string) => {
-          avatarState.value = state
-        }
-      })
+      );
 
-      appState.avatar.instance = avatar
-      appState.avatar.connected = true
+      appState.avatar.instance = avatar;
+      appState.avatar.connected = true;
     } catch (error) {
-      appState.avatar.connected = false
-      throw error
+      appState.avatar.connected = false;
+      throw error;
     }
   }
 
@@ -167,10 +183,10 @@ export class AppStore {
    */
   disconnectAvatar(): void {
     if (appState.avatar.instance) {
-      avatarService.disconnect(appState.avatar.instance)
-      appState.avatar.instance = null
-      appState.avatar.connected = false
-      avatarState.value = ''
+      avatarService.disconnect(appState.avatar.instance);
+      appState.avatar.instance = null;
+      appState.avatar.connected = false;
+      avatarState.value = "";
     }
   }
 
@@ -180,69 +196,75 @@ export class AppStore {
    * @throws {Error} - 当发送消息失败时抛出错误
    */
   async sendMessage(): Promise<string | undefined> {
-    const { llm, ui, avatar } = appState
-    
-    if (!validateConfig(llm, ['apiKey']) || !ui.text || !avatar.instance) {
-      return
+    const { llm, ui, avatar } = appState;
+
+    if (!ui.text || !avatar.instance) {
+      return;
+    }
+    if (llm.model !== "trae-assistant" && !validateConfig(llm, ["apiKey"])) {
+      return;
     }
 
     try {
       // 发送到LLM获取回复
-      const stream = await llmService.sendMessageWithStream({
-        provider: 'openai',
-        model: llm.model,
-        apiKey: llm.apiKey
-      }, ui.text)
+      const stream = await llmService.sendMessageWithStream(
+        {
+          provider: "openai",
+          model: llm.model,
+          apiKey: llm.apiKey,
+        },
+        ui.text,
+      );
 
-      if (!stream) return
+      if (!stream) return;
 
       // 等待虚拟人停止说话
-      await this.waitForAvatarReady()
+      await this.waitForAvatarReady();
 
       // 流式播报响应内容
-      let buffer = ''
-      let isFirstChunk = true
-      
+      let buffer = "";
+      let isFirstChunk = true;
+
       for await (const chunk of stream) {
-        buffer += chunk
-        const arr = splitSentence(buffer)
-        
-        if(arr.length > 1) {
-          const ssml = generateSSML(arr[0] || '')
+        buffer += chunk;
+        const arr = splitSentence(buffer);
+
+        if (arr.length > 1) {
+          const ssml = generateSSML(arr[0] || "");
           if (isFirstChunk) {
             // 第一句话：ssml true false
-            avatar.instance.speak(ssml, true, false)
-            isFirstChunk = false
+            avatar.instance.speak(ssml, true, false);
+            isFirstChunk = false;
           } else {
             // 中间的话：ssml false false
-            avatar.instance.speak(ssml, false, false)
+            avatar.instance.speak(ssml, false, false);
           }
-          
-          buffer = arr[1] || ''
-        }   
+
+          buffer = arr[1] || "";
+        }
       }
 
       // 处理剩余的字符
       if (buffer.length > 0) {
-        const ssml = generateSSML(buffer[0])
-        
+        const ssml = generateSSML(buffer[0]);
+
         if (isFirstChunk) {
           // 第一句话：ssml true false
-          avatar.instance.speak(ssml, true, false)
+          avatar.instance.speak(ssml, true, false);
         } else {
           // 中间的话：ssml false false
-          avatar.instance.speak(ssml, false, false)
+          avatar.instance.speak(ssml, false, false);
         }
       }
 
       // 最后一句话：ssml false true
-      const finalSsml = generateSSML('')
-      avatar.instance.speak(finalSsml, false, true)
+      const finalSsml = generateSSML("");
+      avatar.instance.speak(finalSsml, false, true);
 
-      return buffer
+      return buffer;
     } catch (error) {
-      console.error('发送消息失败:', error)
-      throw error
+      console.error("发送消息失败:", error);
+      throw error;
     }
   }
 
@@ -253,11 +275,8 @@ export class AppStore {
    * @param callbacks.onError - 语音识别错误回调
    * @returns {void}
    */
-  startVoiceInput(callbacks: {
-    onFinished: (text: string) => void
-    onError: (error: any) => void
-  }): void {
-    appState.asr.isListening = true
+  startVoiceInput(): void {
+    appState.asr.isListening = true;
     // ASR逻辑由组件处理
   }
 
@@ -266,7 +285,7 @@ export class AppStore {
    * @returns {void}
    */
   stopVoiceInput(): void {
-    appState.asr.isListening = false
+    appState.asr.isListening = false;
   }
 
   /**
@@ -274,12 +293,12 @@ export class AppStore {
    * @returns {Promise<void>} - 返回等待完成的Promise
    */
   private async waitForAvatarReady(): Promise<void> {
-    if (avatarState.value === 'speak') {
-      appState.avatar.instance.think()
-      await delay(APP_CONFIG.SPEAK_INTERRUPT_DELAY)
+    if (avatarState.value === "speak") {
+      appState.avatar.instance.think();
+      await delay(APP_CONFIG.SPEAK_INTERRUPT_DELAY);
     }
   }
 }
 
 // 导出单例
-export const appStore = new AppStore()
+export const appStore = new AppStore();

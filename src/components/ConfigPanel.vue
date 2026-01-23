@@ -3,27 +3,28 @@
     <!-- 虚拟人配置 -->
     <section class="config-section">
       <h3 class="section-title">虚拟人 SDK 配置</h3>
-      
+
       <div class="form-group">
         <label>应用 APP ID</label>
-        <input 
-          v-model="appState.avatar.appId" 
-          type="text" 
+        <input
+          v-model="appState.avatar.appId"
+          type="text"
           placeholder="请输入 APP ID"
         />
       </div>
-      
+
       <div class="form-group">
         <label>应用 APP Secret</label>
-        <input 
-          v-model="appState.avatar.appSecret" 
-          type="text" 
+        <input
+          v-model="appState.avatar.appSecret"
+          type="text"
           placeholder="请输入 APP Secret"
         />
       </div>
     </section>
 
-    <!-- ASR配置 -->
+    <!-- ASR配置（已禁用） -->
+    <!--
     <section class="config-section">
       <h3 class="section-title">语音识别配置</h3>
       
@@ -61,29 +62,26 @@
         />
       </div>
     </section>
+    -->
 
     <!-- LLM配置 -->
     <section class="config-section">
       <h3 class="section-title">大语言模型配置</h3>
-      
+
       <div class="form-group">
         <label>模型选择</label>
         <select v-model="appState.llm.model">
-          <option 
-            v-for="model in supportedModels" 
-            :key="model" 
-            :value="model"
-          >
+          <option v-for="model in supportedModels" :key="model" :value="model">
             {{ model }}
           </option>
         </select>
       </div>
-      
+
       <div class="form-group">
         <label>API Key</label>
-        <input 
-          v-model="appState.llm.apiKey" 
-          type="password" 
+        <input
+          v-model="appState.llm.apiKey"
+          type="password"
           placeholder="请输入 API Key"
         />
       </div>
@@ -92,16 +90,22 @@
     <!-- 控制按钮 -->
     <section class="control-section">
       <div class="button-group">
-        <button 
-          @click="handleConnect" 
+        <button
+          @click="handleConnect"
           :disabled="isConnecting || appState.avatar.connected"
           class="btn btn-primary"
         >
-          {{ isConnecting ? '连接中...' : appState.avatar.connected ? '已连接' : '连接' }}
+          {{
+            isConnecting
+              ? "连接中..."
+              : appState.avatar.connected
+                ? "已连接"
+                : "连接"
+          }}
         </button>
-        
-        <button 
-          @click="handleDisconnect" 
+
+        <button
+          @click="handleDisconnect"
           :disabled="!appState.avatar.connected"
           class="btn btn-secondary"
         >
@@ -113,17 +117,18 @@
     <!-- 消息交互 -->
     <section class="message-section">
       <h3 class="section-title">消息交互</h3>
-      
+
       <div class="form-group">
         <label>输入消息</label>
-        <textarea 
-          v-model="appState.ui.text" 
-          rows="4" 
+        <textarea
+          v-model="appState.ui.text"
+          rows="4"
           placeholder="请输入您的消息..."
         />
       </div>
-      
+
       <div class="button-group">
+        <!-- 语音输入按钮（已禁用）
         <button 
           @click="handleVoiceInput" 
           :disabled="!appState.avatar.connected || appState.asr.isListening"
@@ -131,13 +136,16 @@
         >
           {{ appState.asr.isListening ? '正在听...' : '语音输入' }}
         </button>
-        
-        <button 
-          @click="handleSendMessage" 
-          :disabled="!appState.avatar.connected || !appState.ui.text.trim() || isSending"
+        -->
+
+        <button
+          @click="handleSendMessage"
+          :disabled="
+            !appState.avatar.connected || !appState.ui.text.trim() || isSending
+          "
           class="btn btn-primary"
         >
-          {{ isSending ? '发送中...' : '发送' }}
+          {{ isSending ? "发送中..." : "发送" }}
         </button>
       </div>
     </section>
@@ -145,108 +153,107 @@
 </template>
 
 <script setup lang="ts">
-import { inject, ref, computed } from 'vue'
-import { useAsr } from '../composables/useAsr'
-import { SUPPORTED_LLM_MODELS } from '../constants'
-import type { AppState, AppStore } from '../types'
+import { inject, ref } from "vue";
+// import { useAsr } from '../composables/useAsr'
+import { SUPPORTED_LLM_MODELS } from "../constants";
+import type { AppState, AppStore } from "../types";
 
 // 注入全局状态和方法
-const appState = inject<AppState>('appState')!
-const appStore = inject<AppStore>('appStore')!
+const appState = inject<AppState>("appState")!;
+const appStore = inject<AppStore>("appStore")!;
 
 // 组件状态
-const isConnecting = ref(false)
-const isSending = ref(false)
-const supportedModels = SUPPORTED_LLM_MODELS
+const isConnecting = ref(false);
+const isSending = ref(false);
+const supportedModels = SUPPORTED_LLM_MODELS;
 
-// ASR Hook - 使用computed确保配置更新时重新创建
-const asrConfig = computed(() => ({
-  provider: 'tx' as const,
-  appId: appState.asr.appId,
-  secretId: appState.asr.secretId,
-  secretKey: appState.asr.secretKey
-}))
+// ASR Hook - 已禁用
+// const asrConfig = computed(() => ({
+//   provider: 'tx' as const,
+//   appId: appState.asr.appId,
+//   secretId: appState.asr.secretId,
+//   secretKey: appState.asr.secretKey
+// }))
 
-// 初始化ASR hook（用于停止功能）
-const { stop: stopAsr } = useAsr(asrConfig.value)
+// 初始化ASR hook（用于停止功能，已禁用）
+// const { stop: stopAsr } = useAsr(asrConfig.value)
 
 // 事件处理函数
 async function handleConnect() {
-  if (isConnecting.value) return
-  
-  isConnecting.value = true
+  if (isConnecting.value) return;
+
+  isConnecting.value = true;
   try {
-    await appStore.connectAvatar()
+    await appStore.connectAvatar();
   } catch (error) {
-    console.error('连接失败:', error)
-    alert('连接失败，请检查配置信息')
+    console.error("连接失败:", error);
+    alert("连接失败，请检查配置信息");
   } finally {
-    isConnecting.value = false
+    isConnecting.value = false;
   }
 }
 
 function handleDisconnect() {
-  appStore.disconnectAvatar()
+  appStore.disconnectAvatar();
 }
 
-function handleVoiceInput() {
-  if (appState.asr.isListening) {
-    stopAsr()
-    appStore.stopVoiceInput()
-    return
-  }
-  
-  // 验证ASR配置
-  const { appId, secretId, secretKey } = appState.asr
-  if (!appId || !secretId || !secretKey) {
-    alert('请先配置ASR信息（App ID、Secret ID、Secret Key）')
-    return
-  }
-  
-  // 创建新的ASR实例（使用当前配置）
-  const { start: startAsrWithConfig, stop: stopAsrWithConfig } = useAsr({
-    provider: 'tx',
-    appId: appState.asr.appId,
-    secretId: appState.asr.secretId,
-    secretKey: appState.asr.secretKey
-  })
-  
-  appStore.startVoiceInput({
-    onFinished: (text: string) => {
-      appState.ui.text = text
-      stopAsrWithConfig()
-      appStore.stopVoiceInput()
-    },
-    onError: (error: any) => {
-      console.error('语音识别错误:', error)
-      stopAsrWithConfig()
-      appStore.stopVoiceInput()
-    }
-  })
-  
-  startAsrWithConfig({
-    onFinished: (text: string) => {
-      appState.ui.text = text
-      appStore.stopVoiceInput()
-    },
-    onError: (error: any) => {
-      console.error('语音识别错误:', error)
-      appStore.stopVoiceInput()
-    }
-  })
-}
+// 语音输入逻辑已禁用
+// function handleVoiceInput() {
+//   if (appState.asr.isListening) {
+//     stopAsr()
+//     appStore.stopVoiceInput()
+//     return
+//   }
+//
+//   const { appId, secretId, secretKey } = appState.asr
+//   if (!appId || !secretId || !secretKey) {
+//     alert('请先配置ASR信息（App ID、Secret ID、Secret Key）')
+//     return
+//   }
+//
+//   const { start: startAsrWithConfig, stop: stopAsrWithConfig } = useAsr({
+//     provider: 'tx',
+//     appId: appState.asr.appId,
+//     secretId: appState.asr.secretId,
+//     secretKey: appState.asr.secretKey
+//   })
+//
+//   appStore.startVoiceInput({
+//     onFinished: (text: string) => {
+//       appState.ui.text = text
+//       stopAsrWithConfig()
+//       appStore.stopVoiceInput()
+//     },
+//     onError: (error: any) => {
+//       console.error('语音识别错误:', error)
+//       stopAsrWithConfig()
+//       appStore.stopVoiceInput()
+//     }
+//   })
+//
+//   startAsrWithConfig({
+//     onFinished: (text: string) => {
+//       appState.ui.text = text
+//       appStore.stopVoiceInput()
+//     },
+//     onError: (error: any) => {
+//       console.error('语音识别错误:', error)
+//       appStore.stopVoiceInput()
+//     }
+//   })
+// }
 
 async function handleSendMessage() {
-  if (isSending.value || !appState.ui.text.trim()) return
-  
-  isSending.value = true
+  if (isSending.value || !appState.ui.text.trim()) return;
+
+  isSending.value = true;
   try {
-    await appStore.sendMessage()
+    await appStore.sendMessage();
   } catch (error) {
-    console.error('发送消息失败:', error)
-    alert('发送消息失败')
+    console.error("发送消息失败:", error);
+    alert("发送消息失败");
   } finally {
-    isSending.value = false
+    isSending.value = false;
   }
 }
 </script>
