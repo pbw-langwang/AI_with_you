@@ -139,7 +139,7 @@ export class AppStore {
     }
 
     try {
-      const deptMatch = ui.text.match(/我要去(.+?)科室/);
+      const deptMatch = ui.text.match(/去(.+?)科室/);
       if (deptMatch) {
         const dept = deptMatch[1];
         await this.waitForAvatarReady();
@@ -170,7 +170,7 @@ export class AppStore {
         return speakText;
       }
 
-      const merchantMatch = ui.text.match(/我要去(.+?)商家/);
+      const merchantMatch = ui.text.match(/去(.+?)店家/);
       if (merchantMatch) {
         const merchant = merchantMatch[1];
         await this.waitForAvatarReady();
@@ -213,66 +213,18 @@ export class AppStore {
         return textOut;
       }
 
-      const stream = await llmService.sendMessageWithStream(
-        {
-          provider: "openai",
-          model: llm.model,
-          apiKey: llm.apiKey,
-        },
-        ui.text,
-      );
-
-      if (!stream) return;
-
+      // If no patterns match, prompt that there's no such feature
       await this.waitForAvatarReady();
-
-      let buffer = "";
-      let isFirstChunk = true;
-      const takeSentence = (s: string): [string | null, string] => {
-        const n = s.length;
-        for (let i = 0; i < n; i++) {
-          const ch = s[i];
-          if (/[。！？!?.,，；;…]/.test(ch)) {
-            const idx = i + 1;
-            return [s.slice(0, idx), s.slice(idx)];
-          }
-        }
-        return [null, s];
-      };
-
-      for await (const chunk of stream) {
-        buffer += chunk;
-        while (true) {
-          const [head, tail] = takeSentence(buffer);
-          if (!head) break;
-          const ssml = generateSSML(head);
-          if (isFirstChunk) {
-            avatar.instance.speak(ssml, true, false);
-            isFirstChunk = false;
-          } else {
-            avatar.instance.speak(ssml, false, false);
-          }
-          buffer = tail;
-        }
-      }
-
-      if (buffer.length > 0) {
-        const ssml = generateSSML(buffer[0]);
-
-        if (isFirstChunk) {
-          avatar.instance.speak(ssml, true, false);
-        } else {
-          avatar.instance.speak(ssml, false, false);
-        }
-      }
-
-      const finalSsml = generateSSML("");
-      avatar.instance.speak(finalSsml, false, true);
-
-      return buffer;
+      const noFeatureText = "暂时没有该功能";
+      avatar.instance.speak(generateSSML(noFeatureText), true, true);
+      return noFeatureText;
     } catch (error) {
       console.error("发送消息失败:", error);
-      throw error;
+      // If error occurs, prompt that there's no such feature
+      await this.waitForAvatarReady();
+      const noFeatureText = "暂时没有该功能";
+      avatar.instance.speak(generateSSML(noFeatureText), true, true);
+      return noFeatureText;
     }
   }
 
