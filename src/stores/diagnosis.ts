@@ -2,7 +2,7 @@ import { generateSSML } from "../utils";
 import type { AppState } from "../types";
 
 export function isDiagnosisTrigger(text: string): boolean {
-  return /(我的症状是什么|症状是什么|我的症状是|症状是)/.test(text);
+  return /(我的症状是什么|症状是什么|我的症状是|症状是|症状)/.test(text);
 }
 
 export function runDiagnosis(appState: AppState): string {
@@ -31,7 +31,7 @@ export function runDiagnosis(appState: AppState): string {
 }
 
 export function isMallFunTrigger(text: string): boolean {
-  return /(这个商场有什么好玩的|商场有什么好玩的|有什么好玩的)/.test(text);
+  return /(这个商场有什么好玩的|商场有什么好玩的|有什么好玩的|什么玩的|玩的)/.test(text);
 }
 
 export function runMallFun(appState: AppState): string {
@@ -40,7 +40,7 @@ export function runMallFun(appState: AppState): string {
     lines: [
       "本商场好玩的有：影院、儿童乐园、VR体验区",
       "根据您的兴趣，我可以推荐适合的娱乐项目",
-      "您可以直接输入我要去商家1或商家2，我会给你院内导航！",
+      "您可以直接输入我要去商家1或商家2，我会给你商场内导航！",
     ],
   };
   if (appState.ui.routeGuide) {
