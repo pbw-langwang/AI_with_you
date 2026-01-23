@@ -30,6 +30,7 @@
     <div
       v-show="appState.ui.subTitleText && !appState.ui.diagnosis?.active"
       class="subtitle"
+      :class="appState.ui.diagnosis?.active ? 'subtitle--top' : 'subtitle--bottom'"
     >
       {{ appState.ui.subTitleText }}
     </div>
@@ -109,7 +110,6 @@ const containerId = computed(() => avatarService.getContainerId());
 .subtitle {
   position: absolute;
   z-index: 1001;
-  top: 24px;
   left: 50%;
   width: 375px;
   max-width: 90%;
@@ -123,6 +123,12 @@ const containerId = computed(() => avatarService.getContainerId());
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
+}
+.subtitle--top {
+  top: 24px;
+}
+.subtitle--bottom {
+  bottom: 24px;
 }
 .diagnosis-panel {
   position: absolute;
