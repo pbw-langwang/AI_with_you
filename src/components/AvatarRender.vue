@@ -17,6 +17,26 @@
     <div v-if="!appState.avatar.connected" class="loading-placeholder">
       <div class="loading-text">-- 正在连接 --</div>
     </div>
+
+    <!-- 路线引导 -->
+    <div v-show="appState.ui.routeGuide?.visible" class="route-guide">
+      <div class="route-title">{{ appState.ui.routeGuide?.title }}</div>
+      <div class="map-3d">
+        <div class="map-surface">
+          <div class="route-arrow route-a"></div>
+          <div class="route-arrow route-b"></div>
+          <div class="route-arrow route-c"></div>
+          <div class="poi start">入口</div>
+          <div class="poi mid">大厅</div>
+          <div class="poi end">目的地</div>
+        </div>
+      </div>
+      <div class="route-steps">
+        <div v-for="(s, i) in appState.ui.routeGuide?.steps" :key="i" class="route-step">
+          {{ i + 1 }}. {{ s }}
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -94,5 +114,82 @@ const containerId = computed(() => avatarService.getContainerId())
   font-size: 18px;
   color: #666;
   font-weight: 500;
+}
+
+.route-guide {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 420px;
+  z-index: 120;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  backdrop-filter: blur(6px);
+}
+
+.route-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 8px;
+}
+
+.map-3d {
+  perspective: 800px;
+  height: 200px;
+  margin-bottom: 10px;
+}
+
+.map-surface {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e8f1ff 0%, #ffffff 100%);
+  border: 1px solid #cdd6e6;
+  border-radius: 10px;
+  transform: rotateX(25deg);
+  transform-origin: bottom;
+  position: relative;
+  overflow: hidden;
+}
+
+.route-arrow {
+  position: absolute;
+  height: 10px;
+  background: linear-gradient(90deg, #0a84ff 0%, #5ac8fa 100%);
+  box-shadow: 0 0 12px rgba(10,132,255,0.6);
+}
+
+.route-a { left: 30px; top: 130px; width: 280px; }
+.route-b { left: 300px; top: 60px; width: 10px; height: 80px; }
+.route-c { left: 120px; top: 60px; width: 180px; height: 10px; }
+
+.poi {
+  position: absolute;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.poi.start { left: 20px; top: 140px; }
+.poi.mid { left: 290px; top: 40px; }
+.poi.end { left: 270px; top: 45px; }
+
+.route-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-step {
+  font-size: 13px;
+  color: #333;
+  padding: 8px;
+  border: 1px dashed #d0d7e2;
+  border-radius: 8px;
+  background: #f7fbff;
 }
 </style>

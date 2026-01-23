@@ -201,12 +201,32 @@ export class AppStore {
     if (!ui.text || !avatar.instance) {
       return;
     }
-    if (llm.model !== "trae-assistant" && !validateConfig(llm, ["apiKey"])) {
-      return;
-    }
 
     try {
-      // 发送到LLM获取回复
+      const deptMatch = ui.text.match(/我要去(.+?)科室/);
+      if (!llm.apiKey || llm.model === "trae-assistant") {
+        if (deptMatch) {
+          const dept = deptMatch[1];
+          await this.waitForAvatarReady();
+          appState.ui.subTitleText = `为您规划到 ${dept} 的路线`;
+          appState.ui.routeGuide = {
+            visible: true,
+            title: `到 ${dept} 的路线引导`,
+            steps: [
+              "从入口进入大厅",
+              "穿过大厅到电梯间",
+              "乘电梯至对应楼层",
+              `沿走廊前往 ${dept} 科室`,
+              "到达科室门口",
+            ],
+          };
+          const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅，穿过大厅到电梯间，乘电梯至对应楼层，沿走廊前往${dept}科室。祝您就诊顺利。`;
+          const ssml = generateSSML(speakText);
+          avatar.instance.speak(ssml, true, true);
+          return speakText;
+        }
+      }
+
       const stream = await llmService.sendMessageWithStream(
         {
           provider: "openai",
@@ -218,10 +238,8 @@ export class AppStore {
 
       if (!stream) return;
 
-      // 等待虚拟人停止说话
       await this.waitForAvatarReady();
 
-      // 流式播报响应内容
       let buffer = "";
       let isFirstChunk = true;
 
@@ -232,11 +250,9 @@ export class AppStore {
         if (arr.length > 1) {
           const ssml = generateSSML(arr[0] || "");
           if (isFirstChunk) {
-            // 第一句话：ssml true false
             avatar.instance.speak(ssml, true, false);
             isFirstChunk = false;
           } else {
-            // 中间的话：ssml false false
             avatar.instance.speak(ssml, false, false);
           }
 
@@ -244,20 +260,16 @@ export class AppStore {
         }
       }
 
-      // 处理剩余的字符
       if (buffer.length > 0) {
         const ssml = generateSSML(buffer[0]);
 
         if (isFirstChunk) {
-          // 第一句话：ssml true false
           avatar.instance.speak(ssml, true, false);
         } else {
-          // 中间的话：ssml false false
           avatar.instance.speak(ssml, false, false);
         }
       }
 
-      // 最后一句话：ssml false true
       const finalSsml = generateSSML("");
       avatar.instance.speak(finalSsml, false, true);
 
