@@ -151,6 +151,12 @@ export class AppStore {
     }
 
     try {
+      // 若已有连接，先断开以避免房间占用
+      if (appState.avatar.instance) {
+        this.disconnectAvatar();
+        await delay(300);
+      }
+
       const avatar = await avatarService.connect(
         {
           appId,
@@ -173,7 +179,30 @@ export class AppStore {
       appState.avatar.connected = true;
     } catch (error) {
       appState.avatar.connected = false;
-      throw error;
+      const msg = String((error as any)?.message || error);
+      if (/房间限流/.test(msg)) {
+        // 房间限流：尝试断开并重试一次
+        this.disconnectAvatar();
+        await delay(800);
+        const avatar = await avatarService.connect(
+          { appId, appSecret },
+          {
+            onSubtitleOn: (text: string) => {
+              appState.ui.subTitleText = text;
+            },
+            onSubtitleOff: () => {
+              appState.ui.subTitleText = "";
+            },
+            onStateChange: (state: string) => {
+              avatarState.value = state;
+            },
+          },
+        );
+        appState.avatar.instance = avatar;
+        appState.avatar.connected = true;
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -203,8 +232,33 @@ export class AppStore {
     }
 
     try {
+      const floorIntent = /(从)?\s*1楼.*?到.*?2楼/.test(ui.text);
       const deptMatch = ui.text.match(/我要去(.+?)科室/);
       if (!llm.apiKey || llm.model === "trae-assistant") {
+        if (floorIntent) {
+          await this.waitForAvatarReady();
+          appState.ui.subTitleText = "为您规划从 1楼 到 2楼的路线";
+          const speakText =
+            "好的，为您规划从一楼到二楼的路线。请从一楼大厅前往电梯间，乘坐电梯到二楼，沿二楼走廊前往目的地。";
+          const dur = Math.max(
+            6,
+            Math.min(18, Math.round(speakText.length / 10)),
+          );
+          appState.ui.routeGuide = {
+            visible: true,
+            title: "从1楼到2楼的立体路线",
+            steps: [
+              "从1楼大厅前往电梯间",
+              "乘坐电梯到2楼",
+              "沿2楼走廊前往目的地",
+            ],
+            mode: "floors",
+            durationSec: dur,
+          };
+          const ssml = generateSSML(speakText);
+          avatar.instance.speak(ssml, true, true);
+          return speakText;
+        }
         if (deptMatch) {
           const dept = deptMatch[1];
           await this.waitForAvatarReady();
@@ -219,6 +273,7 @@ export class AppStore {
               `沿走廊前往 ${dept} 科室`,
               "到达科室门口",
             ],
+            mode: "department",
           };
           const speakText = `好的，为您导航到${dept}科室。请从入口进入大厅，穿过大厅到电梯间，乘电梯至对应楼层，沿走廊前往${dept}科室。祝您就诊顺利。`;
           const ssml = generateSSML(speakText);

@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import { initSDKs, checkSDKStatus } from './utils/sdk-loader'
+import { appStore } from './stores/app'
 
 // 初始化应用
 async function initApp() {
@@ -27,4 +28,11 @@ async function initApp() {
 // 启动应用
 initApp().catch(error => {
   console.error('应用初始化失败:', error)
+})
+
+// 页面卸载前，清理可能占用的房间连接
+window.addEventListener('beforeunload', () => {
+  try {
+    appStore.disconnectAvatar()
+  } catch {}
 })
