@@ -87,3 +87,33 @@ export function runMallFood(appState: AppState): string {
   }
   return speakParts.join("。");
 }
+
+export function isGreetingOrFunctionTrigger(text: string): boolean {
+  return /(hi|嗨|你好|你有什么功能|你的功能是什么)/i.test(text);
+}
+
+export function runGreetingOrFunction(appState: AppState): string {
+  appState.ui.diagnosis = {
+    active: true,
+    lines: [
+      "我是：AI伴你“衣食行医”",
+      "我可以帮你导航到医院科室、商场店铺",
+      "还可以告诉你商场有什么好玩的和好吃的",
+      "请问有什么可以帮助你的吗？",
+    ],
+  };
+  if (appState.ui.routeGuide) {
+    appState.ui.routeGuide.visible = false;
+  }
+  const speakParts = ["你好", ...appState.ui.diagnosis.lines];
+  for (let i = 0; i < speakParts.length; i++) {
+    const isFirst = i === 0;
+    const isLast = i === speakParts.length - 1;
+    appState.avatar.instance.speak(
+      generateSSML(speakParts[i]),
+      isFirst,
+      isLast,
+    );
+  }
+  return speakParts.join("。");
+}

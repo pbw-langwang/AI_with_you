@@ -11,6 +11,8 @@ import {
   runMallFun,
   isMallFoodTrigger,
   runMallFood,
+  isGreetingOrFunctionTrigger,
+  runGreetingOrFunction,
 } from "./diagnosis";
 
 // 应用状态
@@ -170,6 +172,13 @@ export class AppStore {
           }
         }
         return speakText;
+      }
+
+      // Match greetings and function inquiries
+      if (isGreetingOrFunctionTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runGreetingOrFunction(appState);
+        return textOut;
       }
 
       // Match mall merchants (all other 去某某 patterns)
