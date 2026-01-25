@@ -8,7 +8,14 @@ import { appState, appStore } from './stores/app'
 provide('appState', appState)
 provide('appStore', appStore)
 
-onMounted(() => {
+onMounted(async () => {
+  // 自动连接虚拟人
+  try {
+    await appStore.connectAvatar()
+  } catch (error) {
+    console.error('自动连接虚拟人失败:', error)
+  }
+  
   const disconnect = () => {
     try {
       appStore.disconnectAvatar()
