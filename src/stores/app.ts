@@ -9,13 +9,15 @@ import {
   runDiagnosis,
   isMallFunTrigger,
   runMallFun,
+  isMallFoodTrigger,
+  runMallFood,
 } from "./diagnosis";
 
 // 应用状态
 export const appState = reactive<AppState>({
   avatar: {
-    appId: "1749f2b1661b4134ab4964d27820417a",
-    appSecret: "c8122b00df3041459137462c4ceaf3d5",
+    appId: "ba63f0ac8a3a4237aac339b04320e483",
+    appSecret: "110efe12348d4487aa35e8575a6d6d9b",
     connected: false,
     instance: null,
   },
@@ -203,6 +205,12 @@ export class AppStore {
       if (isMallFunTrigger(ui.text)) {
         await this.waitForAvatarReady();
         const textOut = runMallFun(appState);
+        return textOut;
+      }
+
+      if (isMallFoodTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runMallFood(appState);
         return textOut;
       }
 
