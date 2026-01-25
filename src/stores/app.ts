@@ -10,7 +10,6 @@ import {
   isMallFunTrigger,
   runMallFun,
 } from "./diagnosis";
-import { llmService } from "../services/llm";
 
 // 应用状态
 export const appState = reactive<AppState>({
@@ -132,7 +131,7 @@ export class AppStore {
    * @throws {Error} - 当发送消息失败时抛出错误
    */
   async sendMessage(): Promise<string | undefined> {
-    const { llm, ui, avatar } = appState;
+    const { ui, avatar } = appState;
 
     if (!ui.text || !avatar.instance) {
       return;
