@@ -122,7 +122,7 @@
         <textarea
           v-model="appState.ui.text"
           rows="4"
-          placeholder="请输入您的消息，eg：我的症状是...；去某某科室；这里有什么好玩的？；去某某店家"
+          placeholder="请输入您的消息，eg：你好、我的症状是发热、去XX科室、这里有什么好玩的？、有什么好吃的？、去XX店家"
         />
       </div>
 
