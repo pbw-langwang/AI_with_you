@@ -40,7 +40,7 @@ export function runMallFun(appState: AppState): string {
     lines: [
       "本商场好玩的有：影院、儿童乐园、VR体验区！",
       "您可以说出您的想法，我会为您推荐适合的娱乐项目，我在听！",
-      "根据您的想法，我推荐您去影院，直接输入我要去影院商家，我会给您商场内导航！",
+      "根据您的想法，我推荐您去影院，直接输入我要去影院，我会给您商场内导航！",
     ],
   };
   if (appState.ui.routeGuide) {

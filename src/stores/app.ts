@@ -142,10 +142,10 @@ export class AppStore {
     }
 
     try {
-      // Match hospital departments (科室 or 门诊)
-      const deptMatch = ui.text.match(/去(.+?)(科室|门诊)/);
+      // Match hospital departments (科室 or 门诊) with optional "我要" prefix
+      const deptMatch = ui.text.match(/(我要)?去(.+?)(科室|门诊)/);
       if (deptMatch) {
-        const dept = deptMatch[1];
+        const dept = deptMatch[2];
         await this.waitForAvatarReady();
         if (appState.ui.diagnosis?.active) {
           appState.ui.diagnosis.active = false;
@@ -181,37 +181,36 @@ export class AppStore {
         return textOut;
       }
 
-      // Match mall merchants (all other 去某某 patterns)
-      if (ui.text.startsWith('去')) {
-        const merchant = ui.text.substring(1).trim();
-        if (merchant) {
-          await this.waitForAvatarReady();
-          if (appState.ui.diagnosis?.active) {
-            appState.ui.diagnosis.active = false;
-            appState.ui.diagnosis.lines = [];
-          }
-          appState.ui.routeTravel = 0;
-          appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
-          const { speakText, guide, subTitle } = buildRouteGuide(
-            "merchant",
-            merchant,
-          );
-          appState.ui.subTitleText = subTitle;
-          appState.ui.routeGuide = guide;
-          const parts = splitSpeakParts(speakText);
-          if (parts.length > 0) {
-            avatar.instance.speak(
-              generateSSML(parts[0]),
-              true,
-              parts.length === 1,
-            );
-            for (let i = 1; i < parts.length; i++) {
-              const isLast = i === parts.length - 1;
-              avatar.instance.speak(generateSSML(parts[i]), false, isLast);
-            }
-          }
-          return speakText;
+      // Match mall merchants with optional "我要" prefix
+      const merchantMatch = ui.text.match(/(我要)?去(.+)/);
+      if (merchantMatch && merchantMatch[2].trim()) {
+        const merchant = merchantMatch[2].trim();
+        await this.waitForAvatarReady();
+        if (appState.ui.diagnosis?.active) {
+          appState.ui.diagnosis.active = false;
+          appState.ui.diagnosis.lines = [];
         }
+        appState.ui.routeTravel = 0;
+        appState.ui.routeResetToken = (appState.ui.routeResetToken || 0) + 1;
+        const { speakText, guide, subTitle } = buildRouteGuide(
+          "merchant",
+          merchant,
+        );
+        appState.ui.subTitleText = subTitle;
+        appState.ui.routeGuide = guide;
+        const parts = splitSpeakParts(speakText);
+        if (parts.length > 0) {
+          avatar.instance.speak(
+            generateSSML(parts[0]),
+            true,
+            parts.length === 1,
+          );
+          for (let i = 1; i < parts.length; i++) {
+            const isLast = i === parts.length - 1;
+            avatar.instance.speak(generateSSML(parts[i]), false, isLast);
+          }
+        }
+        return speakText;
       }
 
       if (isMallFunTrigger(ui.text)) {

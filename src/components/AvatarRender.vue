@@ -55,9 +55,10 @@
       }"
     />
     <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
-      <div class="diag-line">{{ appState.ui.diagnosis!.lines[0] }}</div>
-      <div class="diag-line">{{ appState.ui.diagnosis!.lines[1] }}</div>
-      <div class="diag-line strong">{{ appState.ui.diagnosis!.lines[2] }}</div>
+      <div v-for="(line, index) in appState.ui.diagnosis!.lines" :key="index" 
+           class="diag-line" :class="{ 'strong': index === appState.ui.diagnosis!.lines.length - 1 }">
+        {{ line }}
+      </div>
     </div>
   </div>
 </template>
