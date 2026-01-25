@@ -2,6 +2,7 @@
   <div class="config-panel">
     <!-- 消息交互 - 固定在右下角 -->
     <div class="message-input-fixed">
+      <p>TODO：做成语音交互更nice！</p>
       <textarea
         v-model="appState.ui.text"
         rows="3"
