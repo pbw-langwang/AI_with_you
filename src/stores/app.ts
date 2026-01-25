@@ -140,7 +140,8 @@ export class AppStore {
     }
 
     try {
-      const deptMatch = ui.text.match(/去(.+?)科室/);
+      // Match hospital departments (科室 or 门诊)
+      const deptMatch = ui.text.match(/去(.+?)(科室|门诊)/);
       if (deptMatch) {
         const dept = deptMatch[1];
         await this.waitForAvatarReady();
@@ -171,9 +172,10 @@ export class AppStore {
         return speakText;
       }
 
-      const merchantMatch = ui.text.match(/去(.+?)店家/);
-      if (merchantMatch) {
-        const merchant = merchantMatch[1];
+      // Match mall merchants (all other 去某某 patterns)
+      const merchantMatch = ui.text.match(/去(.+?)(?!科室|门诊)/);
+      if (merchantMatch && merchantMatch[1].trim()) {
+        const merchant = merchantMatch[1].trim();
         await this.waitForAvatarReady();
         if (appState.ui.diagnosis?.active) {
           appState.ui.diagnosis.active = false;
