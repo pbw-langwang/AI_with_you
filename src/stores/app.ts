@@ -272,6 +272,11 @@ export class AppStore {
 
       // If no patterns match, ask AI
       await this.waitForAvatarReady();
+      // 关闭诊断面板
+      if (appState.ui.diagnosis?.active) {
+        appState.ui.diagnosis.active = false;
+        appState.ui.diagnosis.lines = [];
+      }
       try {
         if (appState.llm.apiKey) {
           const llmResponse = await llmService.sendMessage(
