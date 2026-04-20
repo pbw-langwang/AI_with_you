@@ -62,12 +62,8 @@
       }"
     />
     <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
-      <div
-        v-for="(line, index) in appState.ui.diagnosis!.lines"
-        :key="index"
-        class="diag-line"
-        :class="{ strong: index === appState.ui.diagnosis!.lines.length - 1 }"
-      >
+      <div v-for="(line, index) in appState.ui.diagnosis!.lines" :key="index" 
+           class="diag-line" :class="{ 'strong': index === appState.ui.diagnosis!.lines.length - 1 }">
         {{ line }}
       </div>
     </div>
