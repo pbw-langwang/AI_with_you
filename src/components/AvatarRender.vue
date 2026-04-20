@@ -22,15 +22,21 @@
       :id="containerId"
       class="sdk-container"
       :class="
-        appState.ui.diagnosis?.active ? 'sdk-container--center-large' : ''
+        appState.ui.diagnosis?.active || appState.ui.subTitleText
+          ? 'sdk-container--center-large'
+          : ''
       "
     />
 
     <!-- 字幕显示 -->
     <div
-      v-show="appState.ui.subTitleText && !appState.ui.diagnosis?.active"
+      v-show="appState.ui.subTitleText"
       class="subtitle"
-      :class="appState.ui.diagnosis?.active ? 'subtitle--top' : 'subtitle--bottom'"
+      :class="
+        appState.ui.diagnosis?.active || appState.ui.subTitleText
+          ? 'subtitle--top'
+          : 'subtitle--bottom'
+      "
     >
       {{ appState.ui.subTitleText }}
     </div>
@@ -42,7 +48,8 @@
 
     <!-- 加载状态 -->
     <div v-if="!appState.avatar.connected" class="loading-placeholder">
-      <div class="loading-text">-- 正在连接 --</div>
+      <div class="loading-text">请先点击右侧的「配置」按钮设置API Key</div>
+      <div class="loading-subtext">配置完成后会自动连接</div>
     </div>
 
     <!-- 路线引导 -->
@@ -55,8 +62,12 @@
       }"
     />
     <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
-      <div v-for="(line, index) in appState.ui.diagnosis!.lines" :key="index" 
-           class="diag-line" :class="{ 'strong': index === appState.ui.diagnosis!.lines.length - 1 }">
+      <div
+        v-for="(line, index) in appState.ui.diagnosis!.lines"
+        :key="index"
+        class="diag-line"
+        :class="{ strong: index === appState.ui.diagnosis!.lines.length - 1 }"
+      >
         {{ line }}
       </div>
     </div>
@@ -95,17 +106,20 @@ const containerId = computed(() => avatarService.getContainerId());
   left: -110px;
   bottom: -20px;
   width: 320px;
-  height: 480px;
+  height: 500px;
   border-radius: 12px;
   overflow: hidden;
   /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); */
+}
+.sdk-container :deep(canvas) {
+  transform-origin: top !important;
 }
 .sdk-container--center-large {
   left: 40%;
   bottom: auto;
   top: 60%;
   transform: translate(-50%, -50%);
-  width: 720px;
+  width: 520px;
   height: 960px;
 }
 .subtitle {
@@ -178,7 +192,14 @@ const containerId = computed(() => avatarService.getContainerId());
 }
 .loading-text {
   font-size: 18px;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.loading-subtext {
+  font-size: 14px;
   color: #666;
-  font-weight: 500;
+  font-weight: 400;
 }
 </style>

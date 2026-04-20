@@ -9,8 +9,9 @@ export const APP_CONFIG = {
 // LLM配置
 export const LLM_CONFIG = {
   BASE_URL: "https://ark.cn-beijing.volces.com/api/v3",
-  DEFAULT_MODEL: "doubao-1-5-pro-32k-250115",
-  SYSTEM_PROMPT: "你是人工智能助手",
+  DEFAULT_MODEL: "doubao-seed-2-0-pro-260215",
+  SYSTEM_PROMPT:
+    "你是人工智能助手!了解医疗、健康、运动、美食、购物、服务等信息",
 } as const;
 
 // ASR配置
@@ -33,7 +34,7 @@ export const SDK_CONFIG = {
 } as const;
 
 // 支持的LLM模型列表
-export const SUPPORTED_LLM_MODELS = ["doubao-1-5-pro-32k-250115"] as const;
+export const SUPPORTED_LLM_MODELS = ["doubao-seed-2-0-pro-260215"] as const;
 
 // 支持的ASR提供商
 export const SUPPORTED_ASR_PROVIDERS = [

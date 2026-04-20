@@ -88,6 +88,9 @@ export interface AppState {
       active: boolean;
       lines: string[];
     };
+    configPanel?: {
+      visible: boolean;
+    };
   };
 }
 

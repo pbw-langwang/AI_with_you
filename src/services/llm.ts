@@ -1,33 +1,7 @@
-import OpenAI from 'openai'
-import type { LlmConfig, ChatMessage } from '../types'
+import type { LlmConfig } from '../types'
 import { LLM_CONFIG } from '../constants'
 
 class LlmService {
-  private openai: OpenAI | null = null
-  private currentApiKey: string = ''
-
-  /**
-   * 初始化LLM客户端
-   * @param config - LLM配置对象
-   * @param config.apiKey - API密钥
-   * @param config.model - 模型名称
-   * @param config.baseURL - 可选的基础URL
-   * @returns void
-   */
-  private initClient(config: LlmConfig): void {
-    if (this.currentApiKey === config.apiKey && this.openai) {
-      return
-    }
-
-    this.openai = new OpenAI({
-      apiKey: config.apiKey,
-      dangerouslyAllowBrowser: true,
-      baseURL: config.baseURL || LLM_CONFIG.BASE_URL
-    })
-    
-    this.currentApiKey = config.apiKey
-  }
-
   /**
    * 发送消息到大语言模型
    * @param config - LLM配置对象
@@ -36,32 +10,59 @@ class LlmService {
    * @param config.baseURL - 可选的基础URL
    * @param userMessage - 用户输入的消息内容
    * @returns Promise<string | null> - 返回模型的回复内容，失败时返回null
-   * @throws {Error} - 当LLM客户端未初始化或请求失败时抛出错误
+   * @throws {Error} - 当请求失败时抛出错误
    */
   async sendMessage(config: LlmConfig, userMessage: string): Promise<string | null> {
-    this.initClient(config)
-    
-    if (!this.openai) {
-      throw new Error('LLM客户端未初始化')
-    }
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: LLM_CONFIG.SYSTEM_PROMPT },
-      { role: 'user', content: userMessage }
-    ]
+    const baseURL = config.baseURL || LLM_CONFIG.BASE_URL
+    const apiKey = config.apiKey
+    const model = config.model
 
     try {
-      console.log('发送LLM请求:', { model: config.model, message: userMessage })
+      console.log('发送LLM请求:', { model, message: userMessage })
       
-      const completion = await this.openai.chat.completions.create({
-        messages,
-        model: config.model
+      const response = await fetch(`${baseURL}/responses`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'input_text',
+                  text: LLM_CONFIG.SYSTEM_PROMPT
+                }
+              ]
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: userMessage
+                }
+              ]
+            }
+          ]
+        })
       })
 
-      const response = completion.choices[0]?.message?.content
-      console.log('LLM响应:', response)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`API请求失败: ${errorData.error?.message || response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log('LLM响应:', data)
       
-      return response || null
+      // 解析响应，提取文本内容
+      const messageOutput = data.output?.find((item: any) => item.type === 'message' && item.role === 'assistant')
+      const reply = messageOutput?.content?.find((item: any) => item.type === 'output_text')
+      return reply?.text || null
     } catch (error) {
       console.error('LLM请求失败:', error)
       throw error
@@ -76,7 +77,7 @@ class LlmService {
    * @param config.baseURL - 可选的基础URL
    * @param userMessage - 用户输入的消息内容
    * @returns Promise<AsyncIterable<string>> - 返回异步可迭代的字符串流
-   * @throws {Error} - 当LLM客户端未初始化或请求失败时抛出错误
+   * @throws {Error} - 当请求失败时抛出错误
    */
   async sendMessageWithStream(config: LlmConfig, userMessage: string): Promise<AsyncIterable<string>> {
     // 本地“Trae Assistant”模型：无需调用外部API
@@ -90,30 +91,68 @@ class LlmService {
       })()
     }
 
-    this.initClient(config)
-    if (!this.openai) {
-      throw new Error('LLM客户端未初始化')
-    }
+    // 豆包API的流式接口实现
+    const baseURL = config.baseURL || LLM_CONFIG.BASE_URL
+    const apiKey = config.apiKey
+    const model = config.model
 
-    const messages: ChatMessage[] = [
-      { role: 'system', content: LLM_CONFIG.SYSTEM_PROMPT },
-      { role: 'user', content: userMessage }
-    ]
+    try {
+      const response = await fetch(`${baseURL}/responses`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'input_text',
+                  text: LLM_CONFIG.SYSTEM_PROMPT
+                }
+              ]
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: userMessage
+                }
+              ]
+            }
+          ],
+          stream: true
+        })
+      })
 
-    const stream = await this.openai.chat.completions.create({
-      messages,
-      model: config.model,
-      stream: true
-    })
-
-    return (async function* () {
-      for await (const part of stream) {
-        const content = part.choices[0]?.delta?.content
-        if (content) {
-          yield content
-        }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`API请求失败: ${errorData.error?.message || response.statusText}`)
       }
-    })()
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法获取响应流')
+      }
+
+      return (async function* () {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = new TextDecoder().decode(value)
+          // 处理流式响应，这里需要根据豆包API的实际流式格式进行解析
+          yield chunk
+        }
+      })()
+    } catch (error) {
+      console.error('LLM流式请求失败:', error)
+      throw error
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { LLM_CONFIG, APP_CONFIG } from "../constants";
 import { validateConfig, delay, generateSSML } from "../utils";
 import { buildRouteGuide, splitSpeakParts } from "./routeBuilder";
 import { avatarService } from "../services/avatar";
+import { llmService } from "../services/llm";
 import {
   isDiagnosisTrigger,
   runDiagnosis,
@@ -15,11 +16,48 @@ import {
   runGreetingOrFunction,
 } from "./diagnosis";
 
+// 从本地存储加载配置
+function loadConfig() {
+  try {
+    const avatarConfig = localStorage.getItem("avatarConfig");
+    const llmConfig = localStorage.getItem("llmConfig");
+
+    return {
+      avatar: avatarConfig
+        ? JSON.parse(avatarConfig)
+        : {
+            appId: "",
+            appSecret: "",
+          },
+      llm: llmConfig
+        ? JSON.parse(llmConfig)
+        : {
+            model: LLM_CONFIG.DEFAULT_MODEL,
+            apiKey: "",
+          },
+    };
+  } catch (error) {
+    console.error("加载配置失败:", error);
+    return {
+      avatar: {
+        appId: "",
+        appSecret: "",
+      },
+      llm: {
+        model: LLM_CONFIG.DEFAULT_MODEL,
+        apiKey: "",
+      },
+    };
+  }
+}
+
+const savedConfig = loadConfig();
+
 // 应用状态
 export const appState = reactive<AppState>({
   avatar: {
-    appId: "ba63f0ac8a3a4237aac339b04320e483",
-    appSecret: "110efe12348d4487aa35e8575a6d6d9b",
+    appId: savedConfig.avatar.appId,
+    appSecret: savedConfig.avatar.appSecret,
     connected: false,
     instance: null,
   },
@@ -31,8 +69,8 @@ export const appState = reactive<AppState>({
     isListening: false,
   },
   llm: {
-    model: LLM_CONFIG.DEFAULT_MODEL,
-    apiKey: "",
+    model: savedConfig.llm.model || LLM_CONFIG.DEFAULT_MODEL,
+    apiKey: savedConfig.llm.apiKey || "",
   },
   ui: {
     text: "",
@@ -40,6 +78,7 @@ export const appState = reactive<AppState>({
     routeTravel: 0,
     routeResetToken: 0,
     diagnosis: { active: false, lines: [] },
+    configPanel: { visible: false },
   },
 });
 
@@ -231,11 +270,46 @@ export class AppStore {
         return textOut;
       }
 
-      // If no patterns match, prompt that there's no such feature
+      // If no patterns match, ask AI
       await this.waitForAvatarReady();
-      const noFeatureText = "暂时没有该功能";
-      avatar.instance.speak(generateSSML(noFeatureText), true, true);
-      return noFeatureText;
+      try {
+        if (appState.llm.apiKey) {
+          const llmResponse = await llmService.sendMessage(
+            {
+              provider: "doubao",
+              model: appState.llm.model,
+              apiKey: appState.llm.apiKey,
+              baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+            },
+            appState.ui.text,
+          );
+
+          if (llmResponse) {
+            // 显示字幕
+            appState.ui.subTitleText = llmResponse;
+            // 隐藏路线引导
+            if (appState.ui.routeGuide) {
+              appState.ui.routeGuide.visible = false;
+            }
+            // 让数字人说话
+            avatar.instance.speak(generateSSML(llmResponse), true, true);
+            return llmResponse;
+          } else {
+            const noFeatureText = "暂时没有该功能";
+            avatar.instance.speak(generateSSML(noFeatureText), true, true);
+            return noFeatureText;
+          }
+        } else {
+          const noConfigText = "请先配置API Key";
+          avatar.instance.speak(generateSSML(noConfigText), true, true);
+          return noConfigText;
+        }
+      } catch (error) {
+        console.error("LLM请求失败:", error);
+        const errorText = "AI服务暂时不可用";
+        avatar.instance.speak(generateSSML(errorText), true, true);
+        return errorText;
+      }
     } catch (error) {
       console.error("发送消息失败:", error);
       // If error occurs, prompt that there's no such feature
