@@ -22,7 +22,7 @@
       :id="containerId"
       class="sdk-container"
       :class="
-        appState.ui.diagnosis?.active && !appState.ui.routeGuide?.visible
+        (appState.ui.diagnosis?.active || appState.ui.isLoading) && !appState.ui.routeGuide?.visible
           ? 'sdk-container--center-large'
           : ''
       "

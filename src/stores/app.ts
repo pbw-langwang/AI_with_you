@@ -280,7 +280,7 @@ export class AppStore {
       }
       try {
         if (appState.llm.apiKey) {
-          // 设置加载状态
+          // 设置加载状态（用于让数字人显示在中间放大状态）
           appState.ui.isLoading = true;
           const llmResponse = await llmService.sendMessage(
             {
