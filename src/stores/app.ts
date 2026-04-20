@@ -79,6 +79,7 @@ export const appState = reactive<AppState>({
     routeResetToken: 0,
     diagnosis: { active: false, lines: [] },
     configPanel: { visible: false },
+    isLoading: false,
   },
 });
 
@@ -279,6 +280,8 @@ export class AppStore {
       }
       try {
         if (appState.llm.apiKey) {
+          // 设置加载状态
+          appState.ui.isLoading = true;
           const llmResponse = await llmService.sendMessage(
             {
               provider: "doubao",
@@ -314,6 +317,9 @@ export class AppStore {
         const errorText = "AI服务暂时不可用";
         avatar.instance.speak(generateSSML(errorText), true, true);
         return errorText;
+      } finally {
+        // 关闭加载状态
+        appState.ui.isLoading = false;
       }
     } catch (error) {
       console.error("发送消息失败:", error);

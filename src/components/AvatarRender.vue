@@ -38,6 +38,12 @@
       <img :src="siriIcon" alt="语音输入" />
     </div>
 
+    <!-- AI思考加载状态 -->
+    <div v-if="appState.ui.isLoading" class="ai-loading">
+      <div class="ai-loading-spinner"></div>
+      <div class="ai-loading-text">AI正在思考...</div>
+    </div>
+
     <!-- 加载状态 -->
     <div v-if="!appState.avatar.connected" class="loading-placeholder">
       <div class="loading-text">请先点击右侧的「配置」按钮设置API Key</div>
@@ -95,13 +101,10 @@ const containerId = computed(() => avatarService.getContainerId());
 .sdk-container {
   position: absolute;
   z-index: 1000;
-  left: -110px;
-  bottom: -20px;
   width: 320px;
   height: 500px;
   border-radius: 12px;
   overflow: hidden;
-  /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); */
 }
 .sdk-container :deep(canvas) {
   left: 0 !important;
@@ -193,5 +196,44 @@ const containerId = computed(() => avatarService.getContainerId());
   font-size: 14px;
   color: #666;
   font-weight: 400;
+}
+
+/* AI思考加载状态 */
+.ai-loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(5px);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ai-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ai-loading-text {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
 }
 </style>
