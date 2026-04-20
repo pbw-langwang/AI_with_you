@@ -29,15 +29,7 @@
     />
 
     <!-- 字幕显示 -->
-    <div
-      v-show="appState.ui.subTitleText"
-      class="subtitle"
-      :class="
-        appState.ui.diagnosis?.active || appState.ui.subTitleText
-          ? 'subtitle--top'
-          : 'subtitle--bottom'
-      "
-    >
+    <div v-show="appState.ui.subTitleText" class="subtitle subtitle--bottom">
       {{ appState.ui.subTitleText }}
     </div>
 
@@ -62,8 +54,12 @@
       }"
     />
     <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
-      <div v-for="(line, index) in appState.ui.diagnosis!.lines" :key="index" 
-           class="diag-line" :class="{ 'strong': index === appState.ui.diagnosis!.lines.length - 1 }">
+      <div
+        v-for="(line, index) in appState.ui.diagnosis!.lines"
+        :key="index"
+        class="diag-line"
+        :class="{ strong: index === appState.ui.diagnosis!.lines.length - 1 }"
+      >
         {{ line }}
       </div>
     </div>
@@ -99,16 +95,13 @@ const containerId = computed(() => avatarService.getContainerId());
 .sdk-container {
   position: absolute;
   z-index: 1000;
-  left: -110px;
-  bottom: -20px;
   width: 320px;
   height: 500px;
   border-radius: 12px;
   overflow: hidden;
-  /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); */
 }
 .sdk-container :deep(canvas) {
-  transform-origin: top !important;
+  left: 0 !important;
 }
 .sdk-container--center-large {
   left: 40%;
