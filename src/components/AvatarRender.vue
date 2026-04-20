@@ -22,12 +22,7 @@
       :id="containerId"
       class="sdk-container"
       :class="
-        (appState.ui.diagnosis?.active ||
-          appState.ui.isLoading ||
-          appState.ui.subTitleText) &&
-        !appState.ui.routeGuide?.visible
-          ? 'sdk-container--center-large'
-          : ''
+        !appState.ui.routeGuide?.visible ? 'sdk-container--center-large' : ''
       "
     />
 
