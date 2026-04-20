@@ -22,7 +22,10 @@
       :id="containerId"
       class="sdk-container"
       :class="
-        (appState.ui.diagnosis?.active || appState.ui.isLoading) && !appState.ui.routeGuide?.visible
+        (appState.ui.diagnosis?.active ||
+          appState.ui.isLoading ||
+          appState.ui.subTitleText) &&
+        !appState.ui.routeGuide?.visible
           ? 'sdk-container--center-large'
           : ''
       "
@@ -227,8 +230,12 @@ const containerId = computed(() => avatarService.getContainerId());
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .ai-loading-text {
