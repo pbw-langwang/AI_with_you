@@ -91,6 +91,7 @@ export interface AppState {
     configPanel?: {
       visible: boolean;
     };
+    isLoading?: boolean;
   };
 }
 
