@@ -603,8 +603,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .route-floor-3d {
   position: absolute;
-  inset: 0;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  height: 100%;
+  height: 100%
 }
 </style>

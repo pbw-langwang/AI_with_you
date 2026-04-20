@@ -9,14 +9,17 @@ import {
   runDiagnosis,
   isMallFunTrigger,
   runMallFun,
+  isMallFoodTrigger,
+  runMallFood,
+  isGreetingOrFunctionTrigger,
+  runGreetingOrFunction,
 } from "./diagnosis";
-import { llmService } from "../services/llm";
 
 // 应用状态
 export const appState = reactive<AppState>({
   avatar: {
-    appId: "1749f2b1661b4134ab4964d27820417a",
-    appSecret: "c8122b00df3041459137462c4ceaf3d5",
+    appId: "ba63f0ac8a3a4237aac339b04320e483",
+    appSecret: "110efe12348d4487aa35e8575a6d6d9b",
     connected: false,
     instance: null,
   },
@@ -132,16 +135,17 @@ export class AppStore {
    * @throws {Error} - 当发送消息失败时抛出错误
    */
   async sendMessage(): Promise<string | undefined> {
-    const { llm, ui, avatar } = appState;
+    const { ui, avatar } = appState;
 
     if (!ui.text || !avatar.instance) {
       return;
     }
 
     try {
-      const deptMatch = ui.text.match(/我要去(.+?)科室/);
+      // Match hospital departments (科室 or 门诊) with optional "我要" prefix
+      const deptMatch = ui.text.match(/(我要)?去(.+?)(科室|门诊)/);
       if (deptMatch) {
-        const dept = deptMatch[1];
+        const dept = deptMatch[2];
         await this.waitForAvatarReady();
         if (appState.ui.diagnosis?.active) {
           appState.ui.diagnosis.active = false;
@@ -170,9 +174,17 @@ export class AppStore {
         return speakText;
       }
 
-      const merchantMatch = ui.text.match(/我要去(.+?)商家/);
-      if (merchantMatch) {
-        const merchant = merchantMatch[1];
+      // Match greetings and function inquiries
+      if (isGreetingOrFunctionTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runGreetingOrFunction(appState);
+        return textOut;
+      }
+
+      // Match mall merchants with optional "我要" prefix
+      const merchantMatch = ui.text.match(/(我要)?去(.+)/);
+      if (merchantMatch && merchantMatch[2].trim()) {
+        const merchant = merchantMatch[2].trim();
         await this.waitForAvatarReady();
         if (appState.ui.diagnosis?.active) {
           appState.ui.diagnosis.active = false;
@@ -207,72 +219,30 @@ export class AppStore {
         return textOut;
       }
 
+      if (isMallFoodTrigger(ui.text)) {
+        await this.waitForAvatarReady();
+        const textOut = runMallFood(appState);
+        return textOut;
+      }
+
       if (isDiagnosisTrigger(ui.text)) {
         await this.waitForAvatarReady();
         const textOut = runDiagnosis(appState);
         return textOut;
       }
 
-      const stream = await llmService.sendMessageWithStream(
-        {
-          provider: "openai",
-          model: llm.model,
-          apiKey: llm.apiKey,
-        },
-        ui.text,
-      );
-
-      if (!stream) return;
-
+      // If no patterns match, prompt that there's no such feature
       await this.waitForAvatarReady();
-
-      let buffer = "";
-      let isFirstChunk = true;
-      const takeSentence = (s: string): [string | null, string] => {
-        const n = s.length;
-        for (let i = 0; i < n; i++) {
-          const ch = s[i];
-          if (/[。！？!?.,，；;…]/.test(ch)) {
-            const idx = i + 1;
-            return [s.slice(0, idx), s.slice(idx)];
-          }
-        }
-        return [null, s];
-      };
-
-      for await (const chunk of stream) {
-        buffer += chunk;
-        while (true) {
-          const [head, tail] = takeSentence(buffer);
-          if (!head) break;
-          const ssml = generateSSML(head);
-          if (isFirstChunk) {
-            avatar.instance.speak(ssml, true, false);
-            isFirstChunk = false;
-          } else {
-            avatar.instance.speak(ssml, false, false);
-          }
-          buffer = tail;
-        }
-      }
-
-      if (buffer.length > 0) {
-        const ssml = generateSSML(buffer[0]);
-
-        if (isFirstChunk) {
-          avatar.instance.speak(ssml, true, false);
-        } else {
-          avatar.instance.speak(ssml, false, false);
-        }
-      }
-
-      const finalSsml = generateSSML("");
-      avatar.instance.speak(finalSsml, false, true);
-
-      return buffer;
+      const noFeatureText = "暂时没有该功能";
+      avatar.instance.speak(generateSSML(noFeatureText), true, true);
+      return noFeatureText;
     } catch (error) {
       console.error("发送消息失败:", error);
-      throw error;
+      // If error occurs, prompt that there's no such feature
+      await this.waitForAvatarReady();
+      const noFeatureText = "暂时没有该功能";
+      avatar.instance.speak(generateSSML(noFeatureText), true, true);
+      return noFeatureText;
     }
   }
 

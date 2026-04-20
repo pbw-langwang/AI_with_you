@@ -55,9 +55,10 @@
       }"
     />
     <div v-if="appState.ui.diagnosis?.active" class="diagnosis-panel">
-      <div class="diag-line">{{ appState.ui.diagnosis!.lines[0] }}</div>
-      <div class="diag-line">{{ appState.ui.diagnosis!.lines[1] }}</div>
-      <div class="diag-line strong">{{ appState.ui.diagnosis!.lines[2] }}</div>
+      <div v-for="(line, index) in appState.ui.diagnosis!.lines" :key="index" 
+           class="diag-line" :class="{ 'strong': index === appState.ui.diagnosis!.lines.length - 1 }">
+        {{ line }}
+      </div>
     </div>
   </div>
 </template>
@@ -91,18 +92,18 @@ const containerId = computed(() => avatarService.getContainerId());
 .sdk-container {
   position: absolute;
   z-index: 1000;
-  left: 16px;
-  bottom: 16px;
+  left: -110px;
+  bottom: -20px;
   width: 320px;
   height: 480px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); */
 }
 .sdk-container--center-large {
-  left: 50%;
+  left: 40%;
   bottom: auto;
-  top: 50%;
+  top: 60%;
   transform: translate(-50%, -50%);
   width: 720px;
   height: 960px;
