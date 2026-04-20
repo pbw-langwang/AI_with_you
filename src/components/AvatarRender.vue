@@ -22,7 +22,7 @@
       :id="containerId"
       class="sdk-container"
       :class="
-        appState.ui.diagnosis?.active || appState.ui.subTitleText
+        appState.ui.diagnosis?.active && !appState.ui.routeGuide?.visible
           ? 'sdk-container--center-large'
           : ''
       "
@@ -95,10 +95,13 @@ const containerId = computed(() => avatarService.getContainerId());
 .sdk-container {
   position: absolute;
   z-index: 1000;
+  left: -110px;
+  bottom: -20px;
   width: 320px;
   height: 500px;
   border-radius: 12px;
   overflow: hidden;
+  /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); */
 }
 .sdk-container :deep(canvas) {
   left: 0 !important;
