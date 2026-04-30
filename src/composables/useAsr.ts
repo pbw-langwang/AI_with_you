@@ -1,7 +1,7 @@
-import { ref } from 'vue'
-import type { AsrConfig, AsrCallbacks } from '../types'
-import { ASR_CONFIG } from '../constants'
-import { signCallback } from '../lib/asr'
+import { ref } from "vue";
+import type { AsrConfig, AsrCallbacks } from "../types";
+import { ASR_CONFIG } from "../constants";
+import { signCallback } from "../lib/asr";
 
 /**
  * 语音识别Composable
@@ -14,9 +14,9 @@ import { signCallback } from '../lib/asr'
  * @returns {object} - 返回包含asrText, isListening, start, stop的对象
  */
 export function useAsr(config: AsrConfig) {
-  const asrText = ref('')
-  const isListening = ref(false)
-  let webAudioSpeechRecognizer: any = null
+  const asrText = ref("");
+  const isListening = ref(false);
+  let webAudioSpeechRecognizer: any = null;
 
   /**
    * 构建ASR配置
@@ -36,8 +36,8 @@ export function useAsr(config: AsrConfig) {
     convert_num_mode: ASR_CONFIG.CONVERT_NUM_MODE,
     word_info: ASR_CONFIG.WORD_INFO,
     needvad: ASR_CONFIG.NEEDVAD,
-    vad_silence_time: vadSilenceTime || config.vadSilenceTime || 300
-  })
+    vad_silence_time: vadSilenceTime || config.vadSilenceTime || 300,
+  });
 
   /**
    * 开始语音识别
@@ -49,42 +49,42 @@ export function useAsr(config: AsrConfig) {
    */
   const start = (callbacks: AsrCallbacks, vadSilenceTime?: number) => {
     if (isListening.value) {
-      console.warn('语音识别已在进行中')
-      return
+      console.warn("语音识别已在进行中");
+      return;
     }
 
     // 检查WebAudioSpeechRecognizer是否可用
     if (!window.WebAudioSpeechRecognizer) {
-      console.error('WebAudioSpeechRecognizer 未加载')
-      callbacks.onError('WebAudioSpeechRecognizer 未加载')
-      return
+      console.error("WebAudioSpeechRecognizer 未加载");
+      callbacks.onError("WebAudioSpeechRecognizer 未加载");
+      return;
     }
 
     // 验证必要的配置
     if (!config.appId || !config.secretId || !config.secretKey) {
-      console.error('ASR配置不完整')
-      callbacks.onError('ASR配置不完整，请检查App ID、Secret ID和Secret Key')
-      return
+      console.error("ASR配置不完整");
+      callbacks.onError("ASR配置不完整，请检查App ID、Secret ID和Secret Key");
+      return;
     }
 
-    const asrConfig = buildAsrConfig(vadSilenceTime)
-    console.log('ASR配置:', asrConfig)
-    
+    const asrConfig = buildAsrConfig(vadSilenceTime);
+    console.log("ASR配置:", asrConfig);
+
     try {
-      webAudioSpeechRecognizer = new window.WebAudioSpeechRecognizer(asrConfig)
-      
+      webAudioSpeechRecognizer = new window.WebAudioSpeechRecognizer(asrConfig);
+
       // 设置事件监听
-      setupEventListeners(callbacks)
-      
+      setupEventListeners(callbacks);
+
       // 开始识别
-      webAudioSpeechRecognizer.start()
-      isListening.value = true
-      console.log('开始语音识别')
+      webAudioSpeechRecognizer.start();
+      isListening.value = true;
+      console.log("开始语音识别");
     } catch (error) {
-      console.error('创建WebAudioSpeechRecognizer失败:', error)
-      callbacks.onError(error)
+      console.error("创建WebAudioSpeechRecognizer失败:", error);
+      callbacks.onError(error);
     }
-  }
+  };
 
   /**
    * 停止语音识别
@@ -92,12 +92,12 @@ export function useAsr(config: AsrConfig) {
    */
   const stop = () => {
     if (webAudioSpeechRecognizer) {
-      webAudioSpeechRecognizer.stop()
-      webAudioSpeechRecognizer = null
+      webAudioSpeechRecognizer.stop();
+      webAudioSpeechRecognizer = null;
     }
-    isListening.value = false
-    console.log('停止语音识别')
-  }
+    isListening.value = false;
+    console.log("停止语音识别");
+  };
 
   /**
    * 设置事件监听器
@@ -109,53 +109,53 @@ export function useAsr(config: AsrConfig) {
   const setupEventListeners = (callbacks: AsrCallbacks) => {
     // 开始识别
     webAudioSpeechRecognizer.OnRecognitionStart = (res: any) => {
-      console.log('识别开始:', res)
-    }
+      console.log("识别开始:", res);
+    };
 
     // 一句话开始
     webAudioSpeechRecognizer.OnSentenceBegin = (res: any) => {
-      console.log('句子开始:', res)
-      asrText.value = ''
-    }
+      console.log("句子开始:", res);
+      asrText.value = "";
+    };
 
     // 识别结果变化
     webAudioSpeechRecognizer.OnRecognitionResultChange = (res: any) => {
-      const currentText = res.result?.voice_text_str
+      const currentText = res.result?.voice_text_str;
       if (currentText) {
-        asrText.value = currentText
-        console.log('识别中:', currentText)
+        asrText.value = currentText;
+        console.log("识别中:", currentText);
       }
-    }
+    };
 
     // 一句话结束
     webAudioSpeechRecognizer.OnSentenceEnd = (res: any) => {
-      const resultText = res.result?.voice_text_str
-      console.log('句子结束:', resultText)
-      
+      const resultText = res.result?.voice_text_str;
+      console.log("句子结束:", resultText);
+
       if (resultText) {
-        asrText.value = resultText
-        callbacks.onFinished(resultText)
+        asrText.value = resultText;
+        callbacks.onFinished(resultText);
       }
-    }
+    };
 
     // 识别完成
     webAudioSpeechRecognizer.OnRecognitionComplete = (res: any) => {
-      console.log('识别完成:', res)
-      isListening.value = false
-    }
+      console.log("识别完成:", res);
+      isListening.value = false;
+    };
 
     // 识别错误
     webAudioSpeechRecognizer.OnError = (res: any) => {
-      console.error('识别错误:', res)
-      callbacks.onError(res)
-      isListening.value = false
-    }
-  }
+      console.error("识别错误:", res);
+      callbacks.onError(res);
+      isListening.value = false;
+    };
+  };
 
   return {
     asrText,
     isListening,
     start,
-    stop
-  }
+    stop,
+  };
 }

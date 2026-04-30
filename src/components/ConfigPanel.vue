@@ -114,6 +114,43 @@
             </div>
           </div>
 
+          <!-- 腾讯云语音识别配置 -->
+          <div class="config-section">
+            <h4>🎤 腾讯云语音识别</h4>
+            <div class="config-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>App ID</label>
+                  <input
+                    v-model="appState.asr.appId"
+                    type="text"
+                    placeholder="请输入腾讯云 App ID"
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Secret ID</label>
+                  <input
+                    v-model="appState.asr.secretId"
+                    type="text"
+                    placeholder="请输入腾讯云 Secret ID"
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Secret Key</label>
+                  <input
+                    v-model="appState.asr.secretKey"
+                    type="text"
+                    placeholder="请输入腾讯云 Secret Key"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 邀请码提示 -->
           <div class="invite-code">
             🎁
@@ -143,8 +180,9 @@
 </template>
 
 <script setup lang="ts">
-import { inject, ref } from "vue";
-import type { AppState, AppStore } from "../types";
+import { inject, ref, watch } from "vue";
+import type { AppState, AppStore, AsrConfig, AsrCallbacks } from "../types";
+import { useAsr } from "../composables/useAsr";
 
 // 注入全局状态和方法
 const appState = inject<AppState>("appState")!;
@@ -155,8 +193,53 @@ const isSending = ref(false);
 const isVoiceInputActive = ref(false);
 const apiBaseUrl = ref("https://ark.cn-beijing.volces.com/api/v3");
 
+// ASR实例
+let asrInstance: ReturnType<typeof useAsr> | null = null;
+
+function getAsrInstance() {
+  if (!asrInstance) {
+    const config: AsrConfig = {
+      provider: "tx",
+      appId: appState.asr.appId,
+      secretId: appState.asr.secretId,
+      secretKey: appState.asr.secretKey,
+      vadSilenceTime: 300
+    };
+    asrInstance = useAsr(config);
+    
+    watch(asrInstance.asrText, (newText) => {
+      appState.ui.text = newText;
+    });
+    
+    watch(asrInstance.isListening, (listening) => {
+      isVoiceInputActive.value = listening;
+    });
+  }
+  return asrInstance;
+}
+
 function toggleVoiceInput() {
-  isVoiceInputActive.value = !isVoiceInputActive.value;
+  if (!appState.asr.appId || !appState.asr.secretId || !appState.asr.secretKey) {
+    alert("请先配置ASR参数（App ID、Secret ID、Secret Key）");
+    return;
+  }
+
+  const asr = getAsrInstance();
+  
+  if (isVoiceInputActive.value) {
+    asr.stop();
+  } else {
+    const callbacks: AsrCallbacks = {
+      onFinished: (text: string) => {
+        console.log("语音识别完成:", text);
+      },
+      onError: (error: any) => {
+        console.error("语音识别错误:", error);
+        alert(`语音识别失败: ${error}`);
+      }
+    };
+    asr.start(callbacks);
+  }
 }
 
 async function handleSendMessage() {
@@ -190,6 +273,14 @@ function saveConfig() {
       apiBaseUrl: apiBaseUrl.value,
     }),
   );
+  localStorage.setItem(
+    "asrConfig",
+    JSON.stringify({
+      appId: appState.asr.appId,
+      secretId: appState.asr.secretId,
+      secretKey: appState.asr.secretKey,
+    }),
+  );
 
   // 关闭配置面板
   appState.ui.configPanel!.visible = false;
@@ -210,10 +301,14 @@ function clearConfig() {
   appState.llm.apiKey = "";
   appState.llm.model = "doubao-seed-2-0-pro-260215";
   apiBaseUrl.value = "https://ark.cn-beijing.volces.com/api/v3";
+  appState.asr.appId = "";
+  appState.asr.secretId = "";
+  appState.asr.secretKey = "";
 
   // 清除本地存储
   localStorage.removeItem("avatarConfig");
   localStorage.removeItem("llmConfig");
+  localStorage.removeItem("asrConfig");
 
   // 断开虚拟人连接
   appStore.disconnectAvatar();

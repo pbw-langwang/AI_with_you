@@ -21,6 +21,7 @@ function loadConfig() {
   try {
     const avatarConfig = localStorage.getItem("avatarConfig");
     const llmConfig = localStorage.getItem("llmConfig");
+    const asrConfig = localStorage.getItem("asrConfig");
 
     return {
       avatar: avatarConfig
@@ -35,6 +36,13 @@ function loadConfig() {
             model: LLM_CONFIG.DEFAULT_MODEL,
             apiKey: "",
           },
+      asr: asrConfig
+        ? JSON.parse(asrConfig)
+        : {
+            appId: "",
+            secretId: "",
+            secretKey: "",
+          },
     };
   } catch (error) {
     console.error("加载配置失败:", error);
@@ -46,6 +54,11 @@ function loadConfig() {
       llm: {
         model: LLM_CONFIG.DEFAULT_MODEL,
         apiKey: "",
+      },
+      asr: {
+        appId: "",
+        secretId: "",
+        secretKey: "",
       },
     };
   }
@@ -63,9 +76,9 @@ export const appState = reactive<AppState>({
   },
   asr: {
     provider: "tx",
-    appId: "",
-    secretId: "",
-    secretKey: "",
+    appId: savedConfig.asr.appId,
+    secretId: savedConfig.asr.secretId,
+    secretKey: savedConfig.asr.secretKey,
     isListening: false,
   },
   llm: {
