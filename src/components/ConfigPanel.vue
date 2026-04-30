@@ -196,6 +196,10 @@ const apiBaseUrl = ref("https://ark.cn-beijing.volces.com/api/v3");
 // ASR实例
 let asrInstance: ReturnType<typeof useAsr> | null = null;
 
+// 2秒静默定时器
+let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+const SILENCE_TIMEOUT = 2000;
+
 function getAsrInstance() {
   if (!asrInstance) {
     const config: AsrConfig = {
@@ -209,6 +213,9 @@ function getAsrInstance() {
     
     watch(asrInstance.asrText, (newText) => {
       appState.ui.text = newText;
+      if (newText && isVoiceInputActive.value) {
+        resetSilenceTimer();
+      }
     });
     
     watch(asrInstance.isListening, (listening) => {
@@ -218,6 +225,29 @@ function getAsrInstance() {
   return asrInstance;
 }
 
+function resetSilenceTimer() {
+  if (silenceTimer) {
+    clearTimeout(silenceTimer);
+  }
+  silenceTimer = setTimeout(() => {
+    const asr = getAsrInstance();
+    if (asr && asrInstance?.isListening.value) {
+      asr.stop();
+      const currentText = appState.ui.text.trim();
+      if (currentText) {
+        handleSendMessage();
+      }
+    }
+  }, SILENCE_TIMEOUT);
+}
+
+function clearSilenceTimer() {
+  if (silenceTimer) {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  }
+}
+
 function toggleVoiceInput() {
   if (!appState.asr.appId || !appState.asr.secretId || !appState.asr.secretKey) {
     alert("请先配置ASR参数（App ID、Secret ID、Secret Key）");
@@ -225,8 +255,9 @@ function toggleVoiceInput() {
   }
 
   const asr = getAsrInstance();
-  
+
   if (isVoiceInputActive.value) {
+    clearSilenceTimer();
     asr.stop();
   } else {
     const callbacks: AsrCallbacks = {
@@ -235,10 +266,12 @@ function toggleVoiceInput() {
       },
       onError: (error: any) => {
         console.error("语音识别错误:", error);
+        clearSilenceTimer();
         alert(`语音识别失败: ${error}`);
       }
     };
     asr.start(callbacks);
+    resetSilenceTimer();
   }
 }
 

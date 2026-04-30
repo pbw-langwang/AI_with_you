@@ -29,7 +29,6 @@ export const ASR_CONFIG = {
 // SDK配置
 export const SDK_CONFIG = {
   GATEWAY_URL: "https://nebula-agent.xingyun3d.com/user/v1/ttsa/session",
-  DATA_SOURCE: "2",
   CUSTOM_ID: "demo",
 } as const;
 
