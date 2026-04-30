@@ -200,6 +200,9 @@ let asrInstance: ReturnType<typeof useAsr> | null = null;
 let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 const SILENCE_TIMEOUT = 2000;
 
+// 诊断模式标志
+let isDiagnosisMode = false;
+
 function getAsrInstance() {
   if (!asrInstance) {
     const config: AsrConfig = {
@@ -235,7 +238,11 @@ function resetSilenceTimer() {
       asr.stop();
       const currentText = appState.ui.text.trim();
       if (currentText) {
-        handleSendMessage();
+        if (isDiagnosisMode) {
+          handleDiagnosisVoiceInput(currentText);
+        } else {
+          handleSendMessage();
+        }
       }
     }
   }, SILENCE_TIMEOUT);
@@ -245,6 +252,38 @@ function clearSilenceTimer() {
   if (silenceTimer) {
     clearTimeout(silenceTimer);
     silenceTimer = null;
+  }
+}
+
+function startDiagnosisVoiceInput() {
+  if (!appState.asr.appId || !appState.asr.secretId || !appState.asr.secretKey) {
+    console.warn("ASR配置不完整，无法开启语音输入");
+    return;
+  }
+
+  isDiagnosisMode = true;
+  const asr = getAsrInstance();
+
+  const callbacks: AsrCallbacks = {
+    onFinished: (text: string) => {
+      console.log("诊断模式语音识别完成:", text);
+    },
+    onError: (error: any) => {
+      console.error("诊断模式语音识别错误:", error);
+      clearSilenceTimer();
+      isDiagnosisMode = false;
+    }
+  };
+  asr.start(callbacks, 2000);
+}
+
+async function handleDiagnosisVoiceInput(text: string) {
+  const callback = (appStore as any).getVoiceInputCallback?.();
+  if (callback) {
+    isDiagnosisMode = false;
+    await callback(text);
+  } else {
+    handleSendMessage();
   }
 }
 
@@ -259,7 +298,9 @@ function toggleVoiceInput() {
   if (isVoiceInputActive.value) {
     clearSilenceTimer();
     asr.stop();
+    isDiagnosisMode = false;
   } else {
+    isDiagnosisMode = false;
     const callbacks: AsrCallbacks = {
       onFinished: (text: string) => {
         console.log("语音识别完成:", text);
@@ -274,6 +315,12 @@ function toggleVoiceInput() {
     resetSilenceTimer();
   }
 }
+
+watch(() => appState.asr.isListening, (listening) => {
+  if (listening && !isVoiceInputActive.value) {
+    startDiagnosisVoiceInput();
+  }
+});
 
 async function handleSendMessage() {
   if (isSending.value || !appState.ui.text.trim()) return;

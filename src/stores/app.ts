@@ -14,6 +14,7 @@ import {
   runMallFood,
   isGreetingOrFunctionTrigger,
   runGreetingOrFunction,
+  type DiagnosisResult,
 } from "./diagnosis";
 
 // 从本地存储加载配置
@@ -98,6 +99,10 @@ export const appState = reactive<AppState>({
 
 // 虚拟人状态
 export const avatarState = ref("");
+
+// 语音输入回调处理
+export type VoiceInputCallback = (text: string) => Promise<void>;
+let currentVoiceInputCallback: VoiceInputCallback | null = null;
 
 // Store类 - 业务逻辑处理
 export class AppStore {
@@ -268,20 +273,20 @@ export class AppStore {
 
       if (isMallFunTrigger(ui.text)) {
         await this.waitForAvatarReady();
-        const textOut = runMallFun(appState);
-        return textOut;
+        const result = runMallFun(appState);
+        return this.handleVoiceInputWithAI(result);
       }
 
       if (isMallFoodTrigger(ui.text)) {
         await this.waitForAvatarReady();
-        const textOut = runMallFood(appState);
-        return textOut;
+        const result = runMallFood(appState);
+        return this.handleVoiceInputWithAI(result);
       }
 
       if (isDiagnosisTrigger(ui.text)) {
         await this.waitForAvatarReady();
-        const textOut = runDiagnosis(appState);
-        return textOut;
+        const result = runDiagnosis(appState);
+        return this.handleVoiceInputWithAI(result);
       }
 
       // If no patterns match, ask AI
@@ -345,6 +350,66 @@ export class AppStore {
   }
 
   /**
+   * 处理语音输入并调用AI
+   * @param result - 诊断结果对象，包含播报文本和后缀文本
+   * @returns {Promise<string>} - 返回最终回复文本
+   */
+  private async handleVoiceInputWithAI(result: DiagnosisResult): Promise<string> {
+    const { suffixText } = result;
+
+    return new Promise((resolve) => {
+      currentVoiceInputCallback = async (voiceText: string) => {
+        try {
+          if (appState.llm.apiKey) {
+            appState.ui.isLoading = true;
+            const llmResponse = await llmService.sendMessage(
+              {
+                provider: "doubao",
+                model: appState.llm.model,
+                apiKey: appState.llm.apiKey,
+                baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+              },
+              voiceText,
+            );
+
+            if (llmResponse) {
+              const finalResponse = `${llmResponse}。${suffixText}`;
+              appState.ui.subTitleText = finalResponse;
+              if (appState.ui.routeGuide) {
+                appState.ui.routeGuide.visible = false;
+              }
+              appState.avatar.instance.speak(generateSSML(finalResponse), true, true);
+              if (appState.ui.diagnosis?.active) {
+                appState.ui.diagnosis.active = false;
+                appState.ui.diagnosis.lines = [];
+              }
+              resolve(finalResponse);
+            } else {
+              const noFeatureText = `暂时没有该功能。${suffixText}`;
+              appState.avatar.instance.speak(generateSSML(noFeatureText), true, true);
+              resolve(noFeatureText);
+            }
+          } else {
+            const noConfigText = `请先配置API Key。${suffixText}`;
+            appState.avatar.instance.speak(generateSSML(noConfigText), true, true);
+            resolve(noConfigText);
+          }
+        } catch (error) {
+          console.error("LLM请求失败:", error);
+          const errorText = `AI服务暂时不可用。${suffixText}`;
+          appState.avatar.instance.speak(generateSSML(errorText), true, true);
+          resolve(errorText);
+        } finally {
+          appState.ui.isLoading = false;
+          currentVoiceInputCallback = null;
+        }
+      };
+
+      this.startVoiceInput();
+    });
+  }
+
+  /**
    * 开始语音输入
    * @param callbacks - 回调函数集合
    * @param callbacks.onFinished - 语音识别完成回调
@@ -353,7 +418,6 @@ export class AppStore {
    */
   startVoiceInput(): void {
     appState.asr.isListening = true;
-    // ASR逻辑由组件处理
   }
 
   /**
@@ -362,6 +426,23 @@ export class AppStore {
    */
   stopVoiceInput(): void {
     appState.asr.isListening = false;
+  }
+
+  /**
+   * 设置语音输入回调
+   * @param callback - 语音输入完成后的回调函数
+   * @returns {void}
+   */
+  setVoiceInputCallback(callback: VoiceInputCallback): void {
+    currentVoiceInputCallback = callback;
+  }
+
+  /**
+   * 获取当前语音输入回调
+   * @returns {VoiceInputCallback | null} - 返回当前回调函数
+   */
+  getVoiceInputCallback(): VoiceInputCallback | null {
+    return currentVoiceInputCallback;
   }
 
   /**
