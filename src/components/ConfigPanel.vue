@@ -19,6 +19,12 @@
       />
       <div class="button-container">
         <button
+          @click="toggleVoiceInput"
+          :class="['btn', isVoiceInputActive ? 'btn-voice-active' : 'btn-secondary']"
+        >
+          {{ isVoiceInputActive ? '🎤 录音中' : '🎤 语音输入' }}
+        </button>
+        <button
           @click="handleSendMessage"
           :disabled="
             !appState.avatar.connected || !appState.ui.text.trim() || isSending
@@ -146,7 +152,12 @@ const appStore = inject<AppStore>("appStore")!;
 
 // 组件状态
 const isSending = ref(false);
+const isVoiceInputActive = ref(false);
 const apiBaseUrl = ref("https://ark.cn-beijing.volces.com/api/v3");
+
+function toggleVoiceInput() {
+  isVoiceInputActive.value = !isVoiceInputActive.value;
+}
 
 async function handleSendMessage() {
   if (isSending.value || !appState.ui.text.trim()) return;
@@ -305,6 +316,15 @@ textarea:focus {
 
 .btn-primary:hover:not(:disabled) {
   background: #0056b3;
+}
+
+.btn-voice-active {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-voice-active:hover {
+  background: #c82333;
 }
 
 .btn-secondary {
