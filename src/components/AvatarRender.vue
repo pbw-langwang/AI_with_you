@@ -31,10 +31,10 @@
       {{ appState.ui.subTitleText }}
     </div>
 
-    <!-- 语音输入动画 -->
+    <!-- 语音输入动画（已注释）
     <div v-show="appState.asr.isListening" class="voice-animation">
       <img :src="siriIcon" alt="语音输入" />
-    </div>
+    </div> -->
 
     <!-- AI思考加载状态 -->
     <div v-if="appState.ui.isLoading" class="ai-loading">
@@ -74,7 +74,7 @@
 import { inject, computed } from "vue";
 import { avatarService } from "../services/avatar";
 import type { AppState } from "../types";
-import siriIcon from "../assets/siri.png";
+// import siriIcon from "../assets/siri.png"; // 已注释，不再使用
 import RouteGuide from "./RouteGuide.vue";
 import RouteFloor3D from "./RouteFloor3D.vue";
 import RouteFloor3DMerchant from "./RouteFloor3DMerchant.vue";
