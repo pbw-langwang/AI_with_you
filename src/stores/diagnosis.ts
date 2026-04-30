@@ -99,9 +99,9 @@ export function runGreetingOrFunction(appState: AppState): string {
   appState.ui.diagnosis = {
     active: true,
     lines: [
-      "我是：AI伴你“衣食行医”",
-      "我可以帮你导航到医院科室、商场店铺",
-      "还可以告诉你商场有什么好玩的和好吃的",
+      "我是：AI伴你“衣食行医”！",
+      "我可以帮你导航到医院科室、商场店铺。",
+      "还可以告诉你商场有什么好玩的和好吃的。",
       "请问有什么可以帮助你的吗？",
     ],
   };
