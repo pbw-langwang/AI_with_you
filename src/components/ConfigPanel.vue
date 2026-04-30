@@ -20,9 +20,12 @@
       <div class="button-container">
         <button
           @click="toggleVoiceInput"
-          :class="['btn', isVoiceInputActive ? 'btn-voice-active' : 'btn-secondary']"
+          :class="[
+            'btn',
+            isVoiceInputActive ? 'btn-voice-active' : 'btn-secondary',
+          ]"
         >
-          {{ isVoiceInputActive ? '🎤 录音中' : '🎤 语音输入' }}
+          {{ isVoiceInputActive ? "🎤 录音中" : "🎤 语音输入" }}
         </button>
         <button
           @click="handleSendMessage"
@@ -200,8 +203,8 @@ let asrInstance: ReturnType<typeof useAsr> | null = null;
 let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 const SILENCE_TIMEOUT = 2000;
 
-// 诊断模式标志
-let isDiagnosisMode = false;
+// 语音输入模式标志（支持诊断、商场娱乐、商场美食等场景）
+let isVoiceInputMode = false;
 
 function getAsrInstance() {
   if (!asrInstance) {
@@ -210,17 +213,17 @@ function getAsrInstance() {
       appId: appState.asr.appId,
       secretId: appState.asr.secretId,
       secretKey: appState.asr.secretKey,
-      vadSilenceTime: 300
+      vadSilenceTime: 300,
     };
     asrInstance = useAsr(config);
-    
+
     watch(asrInstance.asrText, (newText) => {
       appState.ui.text = newText;
       if (newText && isVoiceInputActive.value) {
         resetSilenceTimer();
       }
     });
-    
+
     watch(asrInstance.isListening, (listening) => {
       isVoiceInputActive.value = listening;
     });
@@ -238,8 +241,8 @@ function resetSilenceTimer() {
       asr.stop();
       const currentText = appState.ui.text.trim();
       if (currentText) {
-        if (isDiagnosisMode) {
-          handleDiagnosisVoiceInput(currentText);
+        if (isVoiceInputMode) {
+          handleVoiceInputCallback(currentText);
         } else {
           handleSendMessage();
         }
@@ -255,32 +258,36 @@ function clearSilenceTimer() {
   }
 }
 
-function startDiagnosisVoiceInput() {
-  if (!appState.asr.appId || !appState.asr.secretId || !appState.asr.secretKey) {
+function startVoiceInputMode() {
+  if (
+    !appState.asr.appId ||
+    !appState.asr.secretId ||
+    !appState.asr.secretKey
+  ) {
     console.warn("ASR配置不完整，无法开启语音输入");
     return;
   }
 
-  isDiagnosisMode = true;
+  isVoiceInputMode = true;
   const asr = getAsrInstance();
 
   const callbacks: AsrCallbacks = {
     onFinished: (text: string) => {
-      console.log("诊断模式语音识别完成:", text);
+      console.log("语音输入模式语音识别完成:", text);
     },
     onError: (error: any) => {
-      console.error("诊断模式语音识别错误:", error);
+      console.error("语音输入模式语音识别错误:", error);
       clearSilenceTimer();
-      isDiagnosisMode = false;
-    }
+      isVoiceInputMode = false;
+    },
   };
   asr.start(callbacks, 2000);
 }
 
-async function handleDiagnosisVoiceInput(text: string) {
+async function handleVoiceInputCallback(text: string) {
   const callback = (appStore as any).getVoiceInputCallback?.();
   if (callback) {
-    isDiagnosisMode = false;
+    isVoiceInputMode = false;
     await callback(text);
   } else {
     handleSendMessage();
@@ -288,7 +295,11 @@ async function handleDiagnosisVoiceInput(text: string) {
 }
 
 function toggleVoiceInput() {
-  if (!appState.asr.appId || !appState.asr.secretId || !appState.asr.secretKey) {
+  if (
+    !appState.asr.appId ||
+    !appState.asr.secretId ||
+    !appState.asr.secretKey
+  ) {
     alert("请先配置ASR参数（App ID、Secret ID、Secret Key）");
     return;
   }
@@ -298,9 +309,9 @@ function toggleVoiceInput() {
   if (isVoiceInputActive.value) {
     clearSilenceTimer();
     asr.stop();
-    isDiagnosisMode = false;
+    isVoiceInputMode = false;
   } else {
-    isDiagnosisMode = false;
+    isVoiceInputMode = false;
     const callbacks: AsrCallbacks = {
       onFinished: (text: string) => {
         console.log("语音识别完成:", text);
@@ -309,18 +320,21 @@ function toggleVoiceInput() {
         console.error("语音识别错误:", error);
         clearSilenceTimer();
         alert(`语音识别失败: ${error}`);
-      }
+      },
     };
     asr.start(callbacks);
     resetSilenceTimer();
   }
 }
 
-watch(() => appState.asr.isListening, (listening) => {
-  if (listening && !isVoiceInputActive.value) {
-    startDiagnosisVoiceInput();
-  }
-});
+watch(
+  () => appState.asr.isListening,
+  (listening) => {
+    if (listening && !isVoiceInputActive.value) {
+      startVoiceInputMode();
+    }
+  },
+);
 
 async function handleSendMessage() {
   if (isSending.value || !appState.ui.text.trim()) return;

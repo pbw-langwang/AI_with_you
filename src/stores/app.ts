@@ -350,11 +350,30 @@ export class AppStore {
   }
 
   /**
+   * 等待数字人说话结束
+   * @returns {Promise<void>} - 返回等待完成的Promise
+   */
+  private async waitForSpeakEnd(): Promise<void> {
+    if (avatarState.value === "speak") {
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (avatarState.value !== "speak") {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+  }
+
+  /**
    * 处理语音输入并调用AI
    * @param result - 诊断结果对象，包含播报文本和后缀文本
    * @returns {Promise<string>} - 返回最终回复文本
    */
-  private async handleVoiceInputWithAI(result: DiagnosisResult): Promise<string> {
+  private async handleVoiceInputWithAI(
+    result: DiagnosisResult,
+  ): Promise<string> {
     const { suffixText } = result;
 
     return new Promise((resolve) => {
@@ -378,7 +397,11 @@ export class AppStore {
               if (appState.ui.routeGuide) {
                 appState.ui.routeGuide.visible = false;
               }
-              appState.avatar.instance.speak(generateSSML(finalResponse), true, true);
+              appState.avatar.instance.speak(
+                generateSSML(finalResponse),
+                true,
+                true,
+              );
               if (appState.ui.diagnosis?.active) {
                 appState.ui.diagnosis.active = false;
                 appState.ui.diagnosis.lines = [];
@@ -386,12 +409,20 @@ export class AppStore {
               resolve(finalResponse);
             } else {
               const noFeatureText = `暂时没有该功能。${suffixText}`;
-              appState.avatar.instance.speak(generateSSML(noFeatureText), true, true);
+              appState.avatar.instance.speak(
+                generateSSML(noFeatureText),
+                true,
+                true,
+              );
               resolve(noFeatureText);
             }
           } else {
             const noConfigText = `请先配置API Key。${suffixText}`;
-            appState.avatar.instance.speak(generateSSML(noConfigText), true, true);
+            appState.avatar.instance.speak(
+              generateSSML(noConfigText),
+              true,
+              true,
+            );
             resolve(noConfigText);
           }
         } catch (error) {
@@ -405,7 +436,11 @@ export class AppStore {
         }
       };
 
-      this.startVoiceInput();
+      this.waitForSpeakEnd().then(() => {
+        setTimeout(() => {
+          this.startVoiceInput();
+        }, 300);
+      });
     });
   }
 
