@@ -30,6 +30,7 @@ export const ASR_CONFIG = {
 export const SDK_CONFIG = {
   GATEWAY_URL: "https://nebula-agent.xingyun3d.com/user/v1/ttsa/session",
   CUSTOM_ID: "demo",
+  DATA_SOURCE: "0",
 } as const;
 
 // 支持的LLM模型列表
